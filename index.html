@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Probrero</title>
+<meta name="description" content="Find local trades, compare rates and reviews, get quotes, and pay invoices online. Pros send invoices, track expenses and get paid by card.">
+<meta name="theme-color" content="#2f5bd3">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Probrero">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Barlow:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidenav" id="sidenav" aria-label="Main menu"></aside>
+  <div class="content">
+    <header class="top" id="top"></header>
+    <main id="app"><div class="loading">Loading Probrero…</div></main>
+    <footer>
+      <span>© <span id="yr"></span> Probrero</span>
+      <span>Card payments are processed securely by Stripe.</span>
+    </footer>
+  </div>
+</div>
+<nav class="bottomnav" id="bottomnav" aria-label="Sections"></nav>
+<div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
+<div id="toast" class="toast" hidden role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/app.js"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}</script>
+</body>
+</html>
