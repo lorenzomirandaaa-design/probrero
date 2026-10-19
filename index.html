@@ -14,7 +14,382 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Barlow:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="/styles.css">
+<style>
+/* Probrero — app shell: navy sidebar (desktop) / bottom tabs (phone) when logged in; open marketing layout when logged out */
+:root{
+  --paper:#f6f7f9; --surface:#ffffff; --ink:#141b24; --muted:#687480; --faint:#9aa4ae; --line:#e7eaee; --hover:#f1f3f6;
+  --accent:#2f5bd3; --accent-ink:#ffffff; --soft:#eef2fc; --mark:#ffd447; --exp:#d4891c;
+  --good:#1b7a49; --good-bg:#e6f4ec; --warn:#94600a; --warn-bg:#fbf0dc; --bad:#b0281e; --bad-bg:#fceae8;
+  --f-brand:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-head:"Barlow","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --nav-bg:#13224a; --nav-ink:#ffffff; --nav-muted:#a9b6d6; --nav-hover:rgba(255,255,255,.07); --nav-sel:rgba(255,255,255,.12);
+  --hero-bg:#2f5bd3; --hero-ink:#ffffff; --mark-ink:#141b24;
+  --r:16px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#0f141a; --surface:#161d25; --ink:#e7ecf0; --muted:#97a3ad; --faint:#66727d; --line:#252f3a; --hover:#1c2530;
+  --accent:#7b98fa; --accent-ink:#0b1220; --soft:#1a2440; --mark:#e6c23a; --exp:#b87a1c;
+  --good:#63c592; --good-bg:#14302a; --warn:#e8a64c; --warn-bg:#30261a; --bad:#ff7d72; --bad-bg:#36201f;
+  --nav-bg:#0c1530; --nav-ink:#eef2ff; --nav-muted:#8e9bbd; --nav-hover:rgba(255,255,255,.06); --nav-sel:rgba(255,255,255,.1);
+  --hero-bg:#2448b0; --hero-ink:#ffffff; --mark-ink:#141b24; color-scheme:dark }}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+img{max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-head);font-weight:600;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.9rem} h2{font-size:1.15rem} h3{font-size:1.05rem}
+p{margin:0}
+a{color:var(--accent)}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500}
+.muted{color:var(--muted)} .small{font-size:.86rem}
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{max-width:1080px;margin:0 auto;padding-inline:20px;display:flex;align-items:center;gap:28px;min-height:64px}
+.brand{font-family:var(--f-brand);font-size:1.6rem;font-weight:700;text-transform:uppercase;text-decoration:none;color:var(--ink);letter-spacing:.02em;flex:none}
+.brand b{color:var(--accent)} .brand span{background:linear-gradient(transparent 64%,var(--mark) 64%);padding:0 1px}
+.tabs{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;align-self:stretch}
+.tabs button{border:0;background:none;padding:0 12px;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--ink)}
+.count{background:var(--accent);color:var(--accent-ink);font-size:.68rem;font-weight:600;border-radius:999px;min-width:18px;height:18px;padding:0 5px;display:inline-grid;place-items:center;font-family:var(--f-mono)}
+.acct{display:flex;gap:8px;align-items:center;flex:none}
+.acct .short{display:none}
+.me{border:0;background:var(--soft);color:var(--accent);width:38px;height:38px;flex:none;display:grid;place-items:center;font-size:.9rem;border-radius:50%;font-family:var(--f-head);font-weight:600;cursor:pointer}
+
+main{max-width:1080px;margin:0 auto;padding:40px 20px 64px;display:flex;flex-direction:column;gap:36px;min-height:60vh}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.head .sub{color:var(--muted);max-width:56ch;margin-top:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.loading{padding:60px 0;text-align:center;color:var(--muted)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:500;font-size:.9rem;white-space:nowrap;text-decoration:none;color:var(--ink);transition:background .15s,border-color .15s}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07);background:var(--accent)}
+.btn.link{border:0;background:none;color:var(--accent);padding:4px 2px}
+.btn.link:hover{text-decoration:underline;background:none}
+.btn.sm{padding:6px 12px;font-size:.84rem;border-radius:8px}
+.btn.full{width:100%}
+.btn[disabled]{opacity:.6;cursor:progress}
+.btn.danger{color:var(--bad)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.pad{padding:24px}
+.notice{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 22px;border-radius:var(--r);background:var(--soft);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
+.notice p{max-width:60ch}
+.err{color:var(--bad);font-size:.88rem}
+.ok{color:var(--good);font-size:.88rem}
+
+/* search + forms */
+.searchbar{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 16px}
+.searchbar svg{flex:none;color:var(--faint)}
+.searchbar input[type=text]{flex:1;min-width:0;border:0;background:none;padding:8px 0;outline:none;border-radius:0}
+.searchbar select{border:0;background:var(--hover);border-radius:10px;padding:8px 10px;width:auto}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.86rem;color:var(--muted)}
+.chip:hover{color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],select,textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:96px;resize:vertical}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,legend{font-size:.84rem;font-weight:500;color:var(--muted)}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.formgrid .full{grid-column:1/-1}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
+.choice label:has(input:checked){border-color:var(--accent);background:var(--soft)}
+.choice input{margin-top:4px}
+.seg{display:flex;background:var(--hover);border-radius:10px;padding:3px}
+.seg button{flex:1;border:0;background:none;padding:8px;border-radius:8px;cursor:pointer;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,24,40,.12)}
+
+/* pro cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.pro{padding:22px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color .15s}
+.pro:hover{border-color:var(--faint)}
+.who{display:flex;gap:12px;align-items:center;min-width:0}
+.avatar{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--accent);display:grid;place-items:center;font-family:var(--f-head);font-weight:600;flex:none}
+.who > div{min-width:0}
+.who h3,.who h1{overflow-wrap:anywhere}
+.rate-line{display:flex;align-items:center;gap:6px;font-size:.88rem}
+.star{color:#e0a100}
+.blurb{color:var(--muted);font-size:.9rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pro-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+.pro-foot .price strong{font-family:var(--f-mono);font-size:1.05rem}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:.78rem;background:var(--hover);border-radius:6px;padding:2px 9px;color:var(--muted)}
+.tag.good{background:var(--good-bg);color:var(--good)}
+
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.76rem;font-weight:500;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.paid,.pill.accepted{background:var(--good-bg);color:var(--good)}
+.pill.unpaid,.pill.quoted{background:var(--warn-bg);color:var(--warn)}
+.pill.pending{background:var(--soft);color:var(--accent)}
+.pill.overdue,.pill.declined,.pill.void{background:var(--bad-bg);color:var(--bad)}
+
+/* row lists */
+.rows{display:flex;flex-direction:column;overflow:hidden}
+.rows > .r{display:flex;align-items:center;gap:16px;padding:14px 20px;border-top:1px solid var(--line)}
+.rows > .r:first-child{border-top:0}
+.rows > .r.click{cursor:pointer} .rows > .r.click:hover{background:var(--hover)}
+.rows .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rows .main strong{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rows .meta{font-size:.84rem;color:var(--muted);overflow-wrap:anywhere}
+.rows .amt{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;text-align:right;min-width:88px}
+.rows .end{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.empty{padding:36px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:14px;align-items:center}
+
+/* profile */
+.profile{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:40px;align-items:start}
+.side{position:sticky;top:96px;padding:24px;display:flex;flex-direction:column;gap:18px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kv strong{display:block;font-family:var(--f-mono);font-weight:500;font-size:1.15rem}
+.price-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.price-row:first-child{border-top:0}
+.price-row span:last-child{font-family:var(--f-mono)}
+.review{padding:16px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.review:first-child{border-top:0;padding-top:0}
+
+/* dashboard */
+.summary{display:grid;grid-template-columns:repeat(4,1fr)}
+.summary > div{padding:22px 24px;display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--line)}
+.summary > div:first-child{border-left:0}
+.summary strong{font-family:var(--f-mono);font-weight:500;font-size:1.6rem;letter-spacing:-.02em}
+.summary .neg{color:var(--bad)}
+.chart-card{padding:24px;display:flex;flex-direction:column;gap:16px}
+.legend{display:flex;gap:18px;font-size:.84rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.plot{position:relative}
+.plot svg{width:100%;height:auto;display:block;overflow:visible}
+.plot .hit{fill:transparent}
+.plot .col-bg{fill:var(--hover);opacity:0;transition:opacity .12s}
+.plot g.m:hover .col-bg,.plot g.m.on .col-bg{opacity:1}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--surface);border-radius:10px;padding:10px 12px;font-size:.82rem;line-height:1.5;white-space:nowrap;transform:translate(-50%,-100%);top:0}
+.tip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.cat{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.cat:first-child{border-top:0}
+.catbar{height:6px;border-radius:3px;background:var(--hover);overflow:hidden}
+.catbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.checklist{display:flex;flex-direction:column}
+.checklist > div{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.checklist > div:first-child{border-top:0;padding-top:0}
+.checklist .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;flex:none;font-size:.8rem;font-weight:600;color:var(--muted)}
+.checklist .done .dot{background:var(--good);border-color:var(--good);color:var(--surface)}
+.checklist .main{flex:1;min-width:0}
+.checklist .done strong{color:var(--muted);text-decoration:line-through}
+
+/* quotes */
+.quote{padding:22px;display:flex;flex-direction:column;gap:14px}
+.quote .desc{color:var(--muted);font-size:.92rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.offer{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+.offer strong{font-family:var(--f-mono);font-weight:500;font-size:1.3rem}
+.due-band{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:24px}
+.due-band strong{font-family:var(--f-mono);font-weight:500;font-size:2rem;letter-spacing:-.02em}
+
+/* pay page */
+.paywrap{max-width:620px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.big-ok{font-size:2.4rem;width:64px;height:64px;border-radius:50%;background:var(--good-bg);color:var(--good);display:grid;place-items:center;margin:0 auto}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,14,20,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:max(32px,env(safe-area-inset-top,0px)) 16px 32px;overflow-y:auto}
+.sheet{background:var(--surface);color:var(--ink);border-radius:18px;width:100%;max-width:600px;padding:28px;display:flex;flex-direction:column;gap:20px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.items{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 64px 96px 28px;gap:8px;align-items:center}
+.item button{border:0;background:none;cursor:pointer;color:var(--faint);font-size:1.2rem}
+.total-line{display:flex;justify-content:space-between;font-family:var(--f-mono);font-weight:500;font-size:1.1rem;border-top:1px solid var(--line);padding-top:14px}
+.doc{display:flex;flex-direction:column;gap:20px}
+.doc-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.doc table{width:100%;border-collapse:collapse;font-size:.92rem}
+.doc th{text-align:left;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500;padding:0 0 8px}
+.doc td{padding:10px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.doc .rt{text-align:right;font-family:var(--f-mono);white-space:nowrap;padding-left:10px}
+.linkbox{display:flex;gap:8px}
+.linkbox input{font-family:var(--f-mono);font-size:.82rem}
+.starpick{display:flex;gap:4px;font-size:1.8rem}
+.starpick label{cursor:pointer;color:var(--line)} .starpick label.on{color:#e0a100}
+.starpick input{position:absolute;opacity:0;width:1px;height:1px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:11px 18px;border-radius:12px;z-index:60;font-weight:500;font-size:.9rem;max-width:calc(100% - 32px)}
+footer{max-width:1080px;margin:0 auto;padding:0 20px 36px;font-size:.82rem;color:var(--faint);display:flex;gap:16px;flex-wrap:wrap}
+
+@media (max-width:860px){
+  .bar{flex-wrap:wrap;gap:0 16px;padding-top:10px;justify-content:space-between}
+  .tabs{order:3;flex-basis:100%;min-height:44px;margin-inline:-8px}
+  .profile,.split{grid-template-columns:1fr}
+  .side{position:static}
+  .summary{grid-template-columns:1fr 1fr}
+  .summary > div:nth-child(3){border-left:0}
+  .summary > div:nth-child(n+3){border-top:1px solid var(--line)}
+}
+@media (max-width:520px){
+  .acct .long{display:none} .acct .short{display:inline}
+  .brand{font-size:1.4rem}
+  main{padding-top:28px;gap:28px}
+  h1{font-size:1.6rem}
+  .formgrid,.choice{grid-template-columns:1fr}
+  .summary strong{font-size:1.25rem}
+  .summary > div{padding:18px}
+  .rows > .r{padding:14px 16px;gap:12px;flex-wrap:wrap}
+  .rows .end{flex-basis:100%;justify-content:flex-start}
+  .item{grid-template-columns:minmax(0,1fr) 52px 80px 24px}
+  .sheet{padding:22px}
+  .searchbar{flex-wrap:wrap;padding:6px 6px 6px 14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* =====================  App shell (layout v2)  ===================== */
+.shell{display:flex;min-height:100vh}
+.content{flex:1;min-width:0;display:flex;flex-direction:column}
+.content main{width:100%}
+.ic{flex:none}
+.sidenav{display:none}
+body.in .sidenav{display:flex;flex-direction:column;gap:24px;width:248px;flex:none;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--nav-bg);color:var(--nav-ink);padding:24px 16px}
+.brand.on-dark b{color:var(--nav-ink)}
+.brand.on-dark span{color:var(--mark-ink);background:var(--mark);padding:0 4px;border-radius:3px}
+.sidenav .brand{padding-left:8px}
+.navlist{display:flex;flex-direction:column;gap:2px}
+.navlist button,.navlink{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;border-radius:10px;background:none;color:var(--nav-muted);font-weight:500;cursor:pointer;text-align:left}
+.navlist button:hover,.navlink:hover{background:var(--nav-hover);color:var(--nav-ink)}
+.navlist button[aria-current="page"]{background:var(--nav-sel);color:var(--nav-ink);box-shadow:inset 3px 0 0 var(--mark)}
+.navlist .count{margin-left:auto;background:var(--mark);color:var(--mark-ink)}
+.nav-foot{margin-top:auto;display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--nav-sel);padding-top:16px}
+.who-btn{display:flex;align-items:center;gap:10px;border:0;background:none;color:var(--nav-ink);padding:8px;border-radius:10px;cursor:pointer;text-align:left;width:100%}
+.who-btn:hover{background:var(--nav-hover)}
+.who-btn .me{background:var(--mark);color:var(--mark-ink);pointer-events:none;flex:none;display:grid;place-items:center}
+.who-txt{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.who-txt strong{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who-txt span{font-size:.8rem;color:var(--nav-muted)}
+.btn.yellow{background:var(--mark);border-color:var(--mark);color:var(--mark-ink);font-weight:600}
+.btn.yellow:hover{background:var(--mark);filter:brightness(1.05)}
+.btn.dark{background:var(--nav-bg);border-color:var(--nav-bg);color:#fff}
+.btn.dark:hover{background:var(--nav-bg);filter:brightness(1.25)}
+.btn.lg{padding:12px 22px;font-size:1rem;border-radius:12px}
+
+/* top bar: logged-out header, or phone header when logged in */
+.top .bar{max-width:1180px}
+.toplinks{display:flex;gap:4px;flex:1}
+.toplinks button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:500;color:var(--muted)}
+.toplinks button:hover{color:var(--ink);background:var(--hover)}
+.toplinks button[aria-current="page"]{color:var(--ink)}
+.top .bar .me{margin-left:auto}
+body.in .top{display:none}
+body.in main{max-width:1180px;padding:36px 40px 64px}
+body.in footer{max-width:1180px;padding-inline:40px;margin:0}
+main{max-width:1180px}
+footer{max-width:1180px}
+
+/* bottom tabs on phones */
+.bottomnav{display:none}
+.bottomnav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--muted);font-size:.7rem;font-weight:500;padding:6px 2px;cursor:pointer;position:relative}
+.bottomnav button[aria-current="page"]{color:var(--accent)}
+.bottomnav button[aria-current="page"] .ic{stroke-width:2.2}
+.bottomnav .count{position:absolute;top:0;left:calc(50% + 6px);min-width:16px;height:16px;font-size:.62rem}
+
+/* home page (logged out) */
+.hero{background:var(--hero-bg);color:var(--hero-ink);border-radius:24px;padding:56px 48px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:var(--mark);opacity:.18}
+.hero > *{position:relative;z-index:1}
+.hero-eyebrow{font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600;opacity:.85}
+.hero h1{font-size:clamp(2rem,4.4vw,3.1rem);max-width:17ch;color:var(--hero-ink);line-height:1.08}
+.hero h1 mark{background:linear-gradient(transparent 58%,var(--mark) 58%);color:inherit;padding:0 2px}
+.hero-search{display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:8px;background:var(--surface);border-radius:16px;padding:8px;max-width:720px;color:var(--ink)}
+.hero-search input[type=text]{border:0;background:var(--hover);border-radius:10px;padding:12px 14px}
+.cats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.cat-tile{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .15s}
+.cat-tile:hover{border-color:var(--accent)}
+.cat-tile strong{font-family:var(--f-head);font-weight:600;font-size:1.02rem}
+.cat-tile span{font-size:.82rem;color:var(--muted)}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.how > div{display:flex;flex-direction:column;gap:8px}
+.step{width:34px;height:34px;border-radius:50%;background:var(--mark);color:var(--mark-ink);display:grid;place-items:center;font-weight:700;font-family:var(--f-head)}
+.pro-cta{flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;background:var(--mark);color:var(--mark-ink);border-radius:24px;padding:36px 40px}
+.pro-cta h2{font-size:1.6rem}
+.pro-cta p{max-width:52ch;margin-top:6px}
+
+/* find pros: filters + results list */
+.find{display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;align-items:start}
+.filters{position:sticky;top:24px;padding:20px;display:flex;flex-direction:column;gap:18px}
+.flabel{font-size:.84rem;font-weight:500;color:var(--muted)}
+.filter-list{display:flex;flex-direction:column;gap:2px}
+.fopt{display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--ink);text-align:left}
+.fopt span{font-size:.8rem;color:var(--faint);font-family:var(--f-mono)}
+.fopt:hover{background:var(--hover)}
+.fopt[aria-pressed="true"]{background:var(--soft);color:var(--accent);font-weight:600}
+.check{display:flex;gap:8px;align-items:center;font-size:.9rem;cursor:pointer}
+.result{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:18px;padding:20px 22px;align-items:start;cursor:pointer;transition:border-color .15s}
+.result:hover{border-color:var(--accent)}
+.avatar.lg{width:56px;height:56px;font-size:1.1rem;border-radius:14px}
+.result-main{display:flex;flex-direction:column;gap:5px;min-width:0}
+.result-title{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.result-title h3{font-size:1.12rem;overflow-wrap:anywhere}
+.result-side{display:flex;flex-direction:column;align-items:flex-end;gap:12px;text-align:right}
+.result-side .price strong{font-family:var(--f-mono);font-size:1.15rem}
+
+/* pro dashboard: main column + right rail */
+.dash{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.rail{display:flex;flex-direction:column;gap:20px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi{padding:18px 20px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi strong{font-family:var(--f-mono);font-weight:500;font-size:1.35rem;letter-spacing:-.02em}
+.kpi.feature{grid-column:1/-1;background:var(--hero-bg);color:var(--hero-ink);border-radius:var(--r);padding:24px 26px;display:flex;flex-direction:row;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px}
+.kpi.feature .label{color:inherit;opacity:.8}
+.kpi.feature strong{font-size:2.4rem;display:block;margin-top:4px}
+.kpi.feature .net{background:var(--mark);color:var(--mark-ink);border-radius:999px;padding:6px 14px;font-size:.86rem;font-weight:600}
+.kpi .neg{color:var(--bad)}
+.quick{display:flex;flex-direction:column;gap:8px}
+.paystate{display:flex;align-items:center;gap:8px;font-weight:500}
+.paystate i{width:10px;height:10px;border-radius:50%;background:var(--faint)}
+.paystate.on i{background:var(--good)}
+
+@media (max-width:1100px){
+  .dash{grid-template-columns:1fr}
+  .rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start}
+}
+@media (max-width:900px){
+  body.in .sidenav{display:none}
+  body.in .top{display:block}
+  body.in main{padding:24px 20px 110px}
+  body.in footer{padding-inline:20px;padding-bottom:100px}
+  body.in .bottomnav{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+  .top .bar{flex-wrap:nowrap;padding-top:0}
+  .toplinks{display:none}
+  .top .acct{margin-left:auto}
+  .find{grid-template-columns:minmax(0,1fr)}
+  .filters{min-width:0}
+  .filters{position:static}
+  .filter-list{flex-direction:row;overflow-x:auto;scrollbar-width:none;gap:6px}
+  .fopt{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+  .cats{grid-template-columns:repeat(2,1fr)}
+  .how{grid-template-columns:1fr;gap:18px}
+}
+@media (max-width:520px){
+  .hero{padding:32px 22px;border-radius:18px}
+  .hero-search{grid-template-columns:1fr}
+  .pro-cta{padding:26px 22px}
+  .result{grid-template-columns:44px minmax(0,1fr);gap:14px;padding:18px}
+  .avatar.lg{width:44px;height:44px;font-size:.95rem}
+  .result-side{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center;text-align:left}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpis .kpi:last-child{grid-column:1/-1}
+  .kpi.feature strong{font-size:1.9rem}
+}
+
+</style>
 </head>
 <body>
 <div class="shell">
@@ -33,7 +408,1018 @@
 <div id="toast" class="toast" hidden role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="/app.js"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}</script>
+<script>
+/* Probrero web app. Talks to Supabase (accounts + data) and to /api/* (Stripe). */
+(() => {
+'use strict';
+
+/* ---------------- basics ---------------- */
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const today = () => ymd(new Date());
+const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); };
+const dayOf = (s) => (s && s.length > 10 ? ymd(new Date(s)) : s);
+function fdate(s, withYear) {
+  if (!s) return '';
+  const [y, m, d] = dayOf(s).split('-').map(Number);
+  const o = { month: 'short', day: 'numeric' };
+  if (withYear || y !== new Date().getFullYear()) o.year = 'numeric';
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', o);
+}
+const initials = (n) => String(n || '?').split(/[^A-Za-z0-9]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+$('#yr').textContent = new Date().getFullYear();
+
+const TRADES = ['Plumbing', 'Electrical', 'HVAC', 'Roofing', 'Handyman', 'Landscaping', 'Painting', 'Cleaning', 'Carpentry', 'Flooring', 'Pest control', 'Moving', 'Appliance repair', 'Pool service', 'Other'];
+const REPLY_TIMES = ['Usually replies within 1 hour', 'Usually replies within a few hours', 'Usually replies the same day', 'Usually replies within 1 day'];
+const EXPENSE_CATS = ['Materials', 'Fuel', 'Tools', 'Insurance', 'Permits', 'Vehicle', 'Software', 'Marketing', 'Other'];
+const SEARCH_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+
+let sb = null, cfg = null;
+const st = {
+  user: null, profile: null, pro: null, payments: null,
+  tab: 'home', proId: null, payId: null,
+  q: '', zip: '', cardsOnly: false, trade: 'All', sort: 'rating', invFilter: 'All',
+  pros: null, afterAuth: null, booted: false, recovery: false, stripeReturn: null,
+};
+const isPro = () => st.profile?.role === 'pro';
+const uid = () => st.user?.id;
+
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 3200); }
+function friendly(err) {
+  const m = (err && (err.message || err.error_description || err.error)) || String(err || '');
+  if (/row-level security/i.test(m) && /reviews/i.test(m)) return 'You can review a pro after you\'ve paid one of their invoices on Probrero.';
+  if (/row-level security/i.test(m)) return 'You don\'t have permission to do that.';
+  if (/duplicate key.*reviews/i.test(m)) return 'You\'ve already reviewed this pro.';
+  if (/duplicate key.*number/i.test(m)) return 'That invoice number is already used. Try again.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Can\'t reach Probrero. Check your connection and try again.';
+  return m || 'Something went wrong. Try again.';
+}
+async function q(p) { const { data, error } = await p; if (error) throw error; return data; }
+async function api(path, body) {
+  const headers = { 'content-type': 'application/json' };
+  const { data } = await sb.auth.getSession();
+  if (data?.session?.access_token) headers.authorization = 'Bearer ' + data.session.access_token;
+  const r = await fetch(path, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(out.error || 'Request failed (' + r.status + ')');
+  return out;
+}
+function busy(btn, on, label) {
+  if (!btn) return;
+  if (on) { btn.dataset.label = btn.innerHTML; btn.disabled = true; btn.textContent = label || 'Working…'; }
+  else { btn.disabled = false; if (btn.dataset.label) btn.innerHTML = btn.dataset.label; }
+}
+function platformFee(cents) {
+  const f = cfg?.fee || { percent: 3.9, flatCents: 30 };
+  return Math.max(0, Math.min(Math.round((cents * f.percent) / 100) + f.flatCents, cents - 50));
+}
+const invTotal = (items) => items.reduce((s, x) => s + num(x.qty) * num(x.rate), 0);
+const invStatus = (i) => (i.status === 'paid' ? 'paid' : i.status === 'void' ? 'void' : i.due_on < today() ? 'overdue' : 'unpaid');
+function pill(s) {
+  const t = { paid: 'Paid', unpaid: 'Unpaid', overdue: 'Overdue', void: 'Canceled', pending: 'New', quoted: 'Quoted', accepted: 'Accepted', declined: 'Declined' }[s] || s;
+  return '<span class="pill ' + esc(s) + '">' + t + '</span>';
+}
+const payLink = (id) => location.origin + '/?pay=' + id;
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  const params = new URLSearchParams(location.search);
+  try {
+    const r = await fetch('/api/config');
+    cfg = await r.json();
+    if (!r.ok || cfg.error) throw new Error('config');
+  } catch (e) { return setupError(); }
+  if (!window.supabase) { app.innerHTML = errorHtml('Couldn\'t load the sign-in service. Refresh the page.'); return; }
+
+  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') st.recovery = true;
+    setTimeout(() => onAuth(event, session), 0);   // never await Supabase inside this callback
+  });
+
+  if (params.get('pay')) { st.tab = 'pay'; st.payId = params.get('pay'); }
+  else if (params.get('paid')) { st.tab = 'paid'; st.payId = params.get('paid'); }
+  if (params.get('stripe')) st.stripeReturn = params.get('stripe');
+  if (params.toString()) history.replaceState(null, '', location.pathname + location.hash);
+
+  const { data } = await sb.auth.getSession();
+  await loadUser(data?.session?.user || null);
+  if (!st.payId) defaultTab();
+  st.booted = true;
+  render();
+  if (st.recovery) mNewPassword();
+  if (st.stripeReturn && isPro()) handleStripeReturn();
+}
+
+async function onAuth(event, session) {
+  if (event === 'PASSWORD_RECOVERY' && st.booted) mNewPassword();
+  if (!st.booted) return;
+  const newId = session?.user?.id || null;
+  if (newId === (st.user?.id || null)) { if (session?.user) st.user = session.user; return; }
+  await loadUser(session?.user || null);
+  if (st.tab !== 'pay' && st.tab !== 'paid') defaultTab(true);
+  render();
+  const next = st.afterAuth; st.afterAuth = null;
+  if (next && st.user) {
+    if (next.act === 'quote' && !isPro()) mQuote(next.proId);
+  }
+}
+
+async function loadUser(user) {
+  st.user = user; st.profile = st.pro = st.payments = null;
+  if (!user) return;
+  try {
+    st.profile = await q(sb.from('profiles').select('*').eq('id', user.id).maybeSingle());
+    if (isPro()) {
+      const [pro, pay] = await Promise.all([
+        q(sb.from('pros').select('*').eq('id', user.id).maybeSingle()),
+        q(sb.from('pro_payments').select('*').eq('pro_id', user.id).maybeSingle()),
+      ]);
+      st.pro = pro; st.payments = pay;
+    }
+  } catch (e) { toast(friendly(e)); }
+}
+
+function defaultTab(keep) {
+  const allowed = tabsFor().map((t) => t[0]).concat(['pro']);
+  if (isPro() && !st.pro) { st.tab = 'setup'; return; }
+  if (keep && allowed.includes(st.tab)) return;
+  st.tab = !st.user ? 'home' : isPro() ? 'dash' : 'find';
+}
+
+function setupError() {
+  $('#tabs').innerHTML = '';
+  app.innerHTML = `<div class="card pad stack" style="max-width:640px">
+    <h1>Almost there</h1>
+    <p>Probrero is online but not connected to its database yet. In Netlify, open <strong>Site configuration → Environment variables</strong>, add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> from your Supabase project, then redeploy.</p>
+    <p class="muted small">The setup guide in the project folder (README.md) walks through every step.</p></div>`;
+}
+const errorHtml = (m) => `<div class="card pad stack"><h2>Something went wrong</h2><p class="muted">${esc(m)}</p><div><button class="btn" data-act="reload">Try again</button></div></div>`;
+
+/* ---------------- header + routing ---------------- */
+const ICONS = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  quotes: '<path d="M4 5h16v11H9l-5 4z"/>',
+  bills: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  dash: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  invoices: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
+  requests: '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/>',
+  expenses: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  business: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v11H4z"/><path d="M9.5 20v-6h5v6"/>',
+  logout: '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+};
+const icon = (n, size) => `<svg class="ic" width="${size || 20}" height="${size || 20}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+
+function tabsFor() {
+  if (!st.user) return [['home', 'Home', 'home'], ['find', 'Find pros', 'search']];
+  if (isPro()) return st.pro
+    ? [['dash', 'Overview', 'dash'], ['invoices', 'Invoices', 'invoices'], ['requests', 'Requests', 'requests'], ['expenses', 'Expenses', 'expenses'], ['business', 'Business', 'business']]
+    : [['setup', 'Get started', 'business']];
+  return [['find', 'Find pros', 'search'], ['quotes', 'My quotes', 'quotes'], ['bills', 'Bills', 'bills']];
+}
+const brandHtml = (dark) => `<a class="brand${dark ? ' on-dark' : ''}" href="/" data-act="home" aria-label="Probrero home"><b>Pro</b><span>brero</span></a>`;
+function renderHeader() {
+  const cur = st.tab === 'pro' ? 'find' : st.tab;
+  const tabs = tabsFor();
+  const signedIn = Boolean(st.user);
+  document.body.classList.toggle('in', signedIn);
+  const navBtn = ([k, l, ic]) => `<button data-act="tab" data-v="${k}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic)}<span>${l}</span><span class="count" data-badge="${k}" hidden></span></button>`;
+  if (signedIn) {
+    const name = st.profile?.full_name || st.user.email || '';
+    $('#sidenav').innerHTML = `${brandHtml(true)}
+      ${isPro() && st.pro ? `<button class="btn yellow full" data-act="new-inv">${icon('plus', 18)}New invoice</button>` : ''}
+      <nav class="navlist" aria-label="Sections">${tabs.map(navBtn).join('')}</nav>
+      <div class="nav-foot">
+        <button class="who-btn" data-act="account" aria-label="Your account"><span class="me">${esc(initials(name))}</span><span class="who-txt"><strong>${esc(st.profile?.full_name || 'Your account')}</strong><span>${isPro() ? 'Pro account' : 'Customer account'}</span></span></button>
+        <button class="navlink" data-act="signout">${icon('logout')}<span>Log out</span></button>
+      </div>`;
+    $('#top').innerHTML = `<div class="bar">${brandHtml()}<button class="me" data-act="account" aria-label="Your account">${esc(initials(name))}</button></div>`;
+    $('#bottomnav').innerHTML = tabs.map(navBtn).join('');
+  } else {
+    $('#sidenav').innerHTML = '';
+    $('#bottomnav').innerHTML = '';
+    $('#top').innerHTML = `<div class="bar">${brandHtml()}
+      <nav class="toplinks" aria-label="Sections">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" ${cur === k ? 'aria-current="page"' : ''}>${l}</button>`).join('')}<button data-act="signup-pro">For pros</button></nav>
+      <div class="acct"><button class="btn sm" data-act="signin">Log in</button><button class="btn sm primary" data-act="signup">Sign up</button></div></div>`;
+  }
+  updateBadges();
+}
+async function updateBadges() {
+  if (!st.user) return;
+  const set = (k, n) => document.querySelectorAll(`[data-badge="${k}"]`).forEach((el) => { el.textContent = n; el.hidden = !n; });
+  try {
+    if (isPro() && st.pro) {
+      const { count } = await sb.from('quotes').select('id', { count: 'exact', head: true }).eq('pro_id', uid()).eq('status', 'pending');
+      set('requests', count || 0);
+    } else if (!isPro()) {
+      const [a, b] = await Promise.all([
+        sb.from('invoices').select('id', { count: 'exact', head: true }).eq('customer_id', uid()).eq('status', 'open'),
+        sb.from('quotes').select('id', { count: 'exact', head: true }).eq('customer_id', uid()).eq('status', 'quoted'),
+      ]);
+      set('bills', a.count || 0); set('quotes', b.count || 0);
+    }
+  } catch (e) { /* badges are optional */ }
+}
+
+let renderSeq = 0;
+async function render() {
+  const allowedPublic = ['home', 'find', 'pro', 'pay', 'paid'];
+  if (!st.user && !allowedPublic.includes(st.tab)) st.tab = 'home';
+  if (st.user && !['pay', 'paid', 'pro'].includes(st.tab) && !tabsFor().some((t) => t[0] === st.tab)) defaultTab();
+  renderHeader();
+  const my = ++renderSeq;
+  const slow = setTimeout(() => { if (my === renderSeq) app.innerHTML = '<div class="loading">Loading…</div>'; }, 180);
+  try {
+    const html = await VIEWS[st.tab]();
+    clearTimeout(slow);
+    if (my !== renderSeq) return;
+    app.innerHTML = html;
+    if (AFTER[st.tab]) AFTER[st.tab]();
+  } catch (e) {
+    clearTimeout(slow);
+    if (my !== renderSeq) return;
+    console.error(e);
+    app.innerHTML = errorHtml(friendly(e));
+  }
+}
+function go(tab) { st.tab = tab; window.scrollTo(0, 0); render(); }
+
+/* ---------------- home (logged out) ---------------- */
+async function vHome() {
+  st.pros = await q(sb.from('pro_directory').select('*'));
+  const counts = {}; st.pros.forEach((p) => (counts[p.trade] = (counts[p.trade] || 0) + 1));
+  const top = [...st.pros].sort((a, b) => b.rating - a.rating || b.jobs_done - a.jobs_done).slice(0, 3);
+  const cats = ['Plumbing', 'Electrical', 'HVAC', 'Handyman', 'Painting', 'Landscaping', 'Roofing', 'Cleaning'];
+  const steps = [['Ask for a quote', 'Describe the job and pick a pro. They reply with a price, usually the same day.'], ['Compare and book', 'See rates, licenses and reviews from customers who actually paid.'], ['Pay when it\'s done', 'Pay the invoice by card. Every receipt stays in your account.']];
+  return `<section class="hero">
+    <span class="hero-eyebrow">Local trades, booked and paid in one place</span>
+    <h1>Hire a trusted pro. <mark>Pay them in one tap.</mark></h1>
+    <form class="hero-search" data-form="search" role="search">
+      <input id="hs-q" type="text" aria-label="What do you need done?" placeholder="What do you need done?">
+      <input id="hs-zip" type="text" inputmode="numeric" maxlength="5" aria-label="ZIP code" placeholder="ZIP code">
+      <button class="btn primary lg" type="submit">Search</button></form>
+  </section>
+  <section><div class="sec-head"><h2>Browse by trade</h2><button class="btn link" data-act="tab" data-v="find">See all pros</button></div>
+    <div class="cats">${cats.map((t) => `<button class="cat-tile" data-act="pick-trade" data-v="${t}"><strong>${t}</strong><span>${counts[t] ? counts[t] + ' pro' + (counts[t] === 1 ? '' : 's') : 'Coming soon'}</span></button>`).join('')}</div></section>
+  <section><h2>How Probrero works</h2><div class="how">${steps.map(([t, d], k) => `<div><span class="step">${k + 1}</span><h3>${t}</h3><p class="muted">${d}</p></div>`).join('')}</div></section>
+  ${top.length ? `<section><div class="sec-head"><h2>Top-rated pros</h2><button class="btn link" data-act="tab" data-v="find">See all</button></div><div class="stack" style="gap:12px">${top.map(resultCard).join('')}</div></section>` : ''}
+  <section class="pro-cta"><div><h2>Run a trade business?</h2><p>Get listed free, answer quote requests, send invoices and get paid by card. Your books stay in one place.</p></div><button class="btn dark lg" data-act="signup-pro">List your business</button></section>`;
+}
+
+/* ---------------- find pros ---------------- */
+const resultCard = (p) => `<article class="card result" data-act="open-pro" data-v="${p.id}" tabindex="0" aria-label="${esc(p.business_name)}">
+  <div class="avatar lg">${esc(initials(p.business_name))}</div>
+  <div class="result-main"><div class="result-title"><h3>${esc(p.business_name)}</h3>${p.accepts_cards ? '<span class="tag good">Pay by card</span>' : ''}</div>
+    <div class="small muted">${esc(p.trade)}${p.city ? ' · ' + esc(p.city) : ''}${p.years_in_business ? ' · ' + p.years_in_business + ' yr' + (p.years_in_business === 1 ? '' : 's') + ' in business' : ''}</div>
+    ${ratingLine(p)}<p class="blurb">${esc(p.about || 'No description yet.')}</p></div>
+  <div class="result-side">${p.hourly_rate > 0 ? `<div class="price"><strong>${money0.format(p.hourly_rate)}</strong><span class="muted small">/hr</span></div>` : '<span class="muted small">Rates on request</span>'}
+    ${p.id === uid() ? '<span class="small muted">Your listing</span>' : `<button class="btn sm primary" data-act="ask-quote" data-v="${p.id}">Get a quote</button>`}</div>
+</article>`;
+async function vFind() {
+  st.pros = await q(sb.from('pro_directory').select('*'));
+  const trades = ['All', ...[...new Set(st.pros.map((p) => p.trade))].sort()];
+  if (!trades.includes(st.trade)) st.trade = st.pros.length ? 'All' : st.trade;
+  const head = `<div class="head"><div><h1>Find a pro</h1><p class="sub">Compare rates and reviews, request a free quote, and pay the invoice here when the job's done.</p></div></div>`;
+  if (!st.pros.length) return head + `<div class="card empty"><h2 style="color:var(--ink)">No pros are listed yet</h2>
+    <p>Probrero is brand new in your area. Are you a plumber, electrician, painter or other tradesperson?</p>
+    ${isPro() ? '' : '<button class="btn primary" data-act="signup-pro">List your business free</button>'}</div>`;
+  return head + `<div class="find">
+    <aside class="card filters" aria-label="Filters">
+      <div class="field"><label for="q">Search</label><input id="q" type="text" placeholder="Service or business" value="${esc(st.q)}"></div>
+      <div class="field"><label for="fzip">ZIP code</label><input id="fzip" type="text" inputmode="numeric" maxlength="5" placeholder="Any area" value="${esc(st.zip)}"></div>
+      <div class="field"><span class="flabel">Trade</span><div class="filter-list" role="group" aria-label="Trade">${trades.map((t) => `<button class="fopt" data-act="trade" data-v="${esc(t)}" aria-pressed="${st.trade === t}">${esc(t)}<span>${t === 'All' ? st.pros.length : st.pros.filter((p) => p.trade === t).length}</span></button>`).join('')}</div></div>
+      <div class="field"><label for="sort">Sort by</label><select id="sort">
+        <option value="rating" ${st.sort === 'rating' ? 'selected' : ''}>Top rated</option>
+        <option value="price" ${st.sort === 'price' ? 'selected' : ''}>Lowest rate</option>
+        <option value="jobs" ${st.sort === 'jobs' ? 'selected' : ''}>Most jobs</option>
+        <option value="new" ${st.sort === 'new' ? 'selected' : ''}>Newest</option></select></div>
+      <label class="check"><input type="checkbox" id="fcard" ${st.cardsOnly ? 'checked' : ''}> Takes card payments</label>
+    </aside>
+    <div class="stack" style="gap:12px"><p class="small muted" id="rcount"></p><div id="results" class="stack" style="gap:12px"></div></div>
+  </div>`;
+}
+function drawResults() {
+  const box = $('#results'); if (!box) return;
+  const term = st.q.trim().toLowerCase(), zip3 = st.zip.trim().slice(0, 3);
+  const list = st.pros
+    .filter((p) => (st.trade === 'All' || p.trade === st.trade)
+      && (!term || [p.business_name, p.trade, p.about, p.city, ...(p.services || []).map((s) => s.name)].join(' ').toLowerCase().includes(term))
+      && (zip3.length < 3 || String(p.zip || '').startsWith(zip3))
+      && (!st.cardsOnly || p.accepts_cards))
+    .sort({ rating: (a, b) => b.rating - a.rating || b.review_count - a.review_count, price: (a, b) => a.hourly_rate - b.hourly_rate, jobs: (a, b) => b.jobs_done - a.jobs_done, new: (a, b) => b.created_at.localeCompare(a.created_at) }[st.sort]);
+  const rc = $('#rcount'); if (rc) rc.textContent = list.length + ' pro' + (list.length === 1 ? '' : 's') + (st.trade !== 'All' ? ' in ' + st.trade : '') + (zip3.length === 3 ? ' near ' + st.zip.trim() : '');
+  box.innerHTML = list.length ? list.map(resultCard).join('') : '<div class="card empty">No pros match those filters. Try another trade, a different ZIP, or clear the search.</div>';
+}
+const ratingLine = (p) => p.review_count > 0
+  ? `<span class="rate-line"><span class="star" aria-hidden="true">★</span><strong>${Number(p.rating).toFixed(1)}</strong><span class="muted">(${p.review_count} review${p.review_count === 1 ? '' : 's'})</span></span>`
+  : '<span class="rate-line muted">New on Probrero</span>';
+function stars(n) { const f = Math.round(n); return `<span class="star" aria-label="${n} out of 5">${'★'.repeat(f)}<span style="color:var(--line)">${'★'.repeat(5 - f)}</span></span>`; }
+
+async function vProfile() {
+  const [p, reviews] = await Promise.all([
+    q(sb.from('pro_directory').select('*').eq('id', st.proId).maybeSingle()),
+    q(sb.from('reviews').select('*').eq('pro_id', st.proId).order('created_at', { ascending: false })),
+  ]);
+  if (!p) return `<div><button class="btn link" data-act="tab" data-v="find">← All pros</button></div><div class="card empty">This pro isn't listed anymore.</div>`;
+  const mine = p.id === uid();
+  const services = Array.isArray(p.services) ? p.services : [];
+  return `<div><button class="btn link" data-act="tab" data-v="${isPro() ? 'business' : 'find'}">← ${isPro() ? 'Back' : 'All pros'}</button></div>
+  <div class="profile">
+    <div class="stack" style="gap:36px">
+      <div class="stack">
+        <div class="who"><div class="avatar" style="width:56px;height:56px;font-size:1.2rem">${esc(initials(p.business_name))}</div><div><h1>${esc(p.business_name)}</h1><div class="muted">${esc(p.trade)}${p.city ? ' · ' + esc(p.city) : ''}${p.zip ? ' ' + esc(p.zip) : ''}</div></div></div>
+        ${ratingLine(p)}
+        ${p.about ? `<p style="max-width:60ch;white-space:pre-wrap">${esc(p.about)}</p>` : ''}
+        <div class="tags">${p.license ? `<span class="tag num">${esc(p.license)}</span>` : ''}${p.accepts_cards ? '<span class="tag good">Pay by card</span>' : ''}</div>
+      </div>
+      ${services.length ? `<section><h2>Prices</h2><p class="small muted" style="margin-top:-8px">Starting prices. Your quote may change once the pro sees the job.</p>
+        <div>${services.map((s) => `<div class="price-row"><span>${esc(s.name)}</span><span>${num(s.price) > 0 ? money0.format(num(s.price)) : 'Free'}</span></div>`).join('')}</div></section>` : ''}
+      <section><div class="sec-head"><h2>Reviews</h2>${st.user && !isPro() ? `<button class="btn sm" data-act="review" data-v="${p.id}">Write a review</button>` : ''}</div>
+        ${reviews.length ? `<div>${reviews.map((r) => `<div class="review"><div class="small" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stars(r.stars)}<strong>${esc(r.reviewer_name)}</strong><span class="muted">${fdate(r.created_at)}</span></div><p style="white-space:pre-wrap">${esc(r.body)}</p></div>`).join('')}</div>`
+          : '<p class="muted">No reviews yet. Reviews come from customers who paid through Probrero.</p>'}</section>
+    </div>
+    <aside class="card side">
+      <div class="kv">
+        <div><span class="label">Rate</span><strong>${p.hourly_rate > 0 ? money0.format(p.hourly_rate) + '/hr' : '—'}</strong></div>
+        <div><span class="label">Trip fee</span><strong>${p.trip_fee > 0 ? money0.format(p.trip_fee) : 'Free'}</strong></div>
+        <div><span class="label">Jobs paid</span><strong>${p.jobs_done}</strong></div>
+        <div><span class="label">In business</span><strong>${p.years_in_business ? p.years_in_business + ' yr' + (p.years_in_business === 1 ? '' : 's') : '—'}</strong></div>
+      </div>
+      ${mine ? '<button class="btn" data-act="tab" data-v="business">Edit your listing</button>' : isPro() ? '' : `<button class="btn primary" data-act="ask-quote" data-v="${p.id}">Request a free quote</button>`}
+      ${p.response_time ? `<p class="small muted" style="text-align:center">${esc(p.response_time)}</p>` : ''}
+    </aside>
+  </div>`;
+}
+
+/* ---------------- customer: quotes + bills ---------------- */
+async function vQuotes() {
+  const mine = await q(sb.from('quotes').select('*, pros(business_name, trade, response_time)').eq('customer_id', uid()).order('created_at', { ascending: false }));
+  return `<div class="head"><div><h1>My quotes</h1><p class="sub">Prices pros sent back. Accept one and the pro will schedule the job and invoice you here.</p></div><button class="btn" data-act="tab" data-v="find">Find a pro</button></div>
+  <div class="stack" style="gap:16px">${mine.length ? mine.map((x) => {
+    const p = x.pros || {};
+    return `<article class="card quote">
+      <div class="sec-head"><div class="who"><div class="avatar">${esc(initials(p.business_name))}</div><div><h3>${esc(p.business_name || 'Pro')}</h3><div class="small muted">Sent ${fdate(x.created_at)}${x.timing ? ' · ' + esc(x.timing) : ''}</div></div></div>${pill(x.status)}</div>
+      <p class="desc">${esc(x.description)}</p>
+      ${x.status === 'pending' ? `<div class="offer"><span class="small muted">Waiting on the pro.${p.response_time ? ' ' + esc(p.response_time) + '.' : ''}</span><button class="btn sm" data-act="q-cancel" data-v="${x.id}">Cancel request</button></div>` : ''}
+      ${x.amount != null ? `<div class="offer"><div><span class="label">Quoted price</span><br><strong>${money.format(x.amount)}</strong>${x.note ? `<div class="small muted">${esc(x.note)}</div>` : ''}</div>
+        ${x.status === 'quoted' ? `<div style="display:flex;gap:8px"><button class="btn" data-act="q-decline" data-v="${x.id}">Decline</button><button class="btn primary" data-act="q-accept" data-v="${x.id}">Accept</button></div>` : ''}
+        ${x.status === 'accepted' ? '<span class="small muted">Accepted. The invoice will appear under Bills.</span>' : ''}</div>` : ''}
+    </article>`;
+  }).join('') : '<div class="card empty">No quote requests yet.<button class="btn primary" data-act="tab" data-v="find">Find a pro</button></div>'}</div>`;
+}
+
+async function vBills() {
+  const bills = await q(sb.from('invoices').select('*, pros(business_name)').eq('customer_id', uid()).neq('status', 'void').order('due_on'));
+  const open = bills.filter((i) => i.status === 'open');
+  const paid = bills.filter((i) => i.status === 'paid').sort((a, b) => (b.paid_at || '').localeCompare(a.paid_at || ''));
+  const due = open.reduce((s, i) => s + Number(i.total), 0);
+  const name = (i) => esc(i.pros?.business_name || 'Pro');
+  return `<div class="head"><div><h1>Bills</h1><p class="sub">Invoices from your pros. Pay by card through Stripe and keep every receipt in one place.</p></div></div>
+  <div class="card due-band"><div><span class="label">Total due</span><br><strong>${money.format(due)}</strong></div><span class="muted">${open.length} open${open[0] ? ' · next due ' + fdate(open[0].due_on) : ''}</span></div>
+  <section><h2>Open</h2><div class="card rows">${open.length ? open.map((i) => `
+    <div class="r"><div class="avatar">${esc(initials(i.pros?.business_name))}</div><div class="main"><strong>${name(i)}</strong><span class="meta">${esc(i.number)} · due ${fdate(i.due_on)}</span></div>
+      <span class="amt">${money.format(i.total)}</span><div class="end">${pill(invStatus(i))}<button class="btn sm" data-act="view-inv" data-v="${i.id}">View</button><button class="btn sm primary" data-act="pay" data-v="${i.id}">Pay</button></div></div>`).join('') : '<div class="empty">You\'re all paid up.</div>'}</div></section>
+  <section><h2>Paid</h2><div class="card rows">${paid.length ? paid.map((i) => `
+    <div class="r click" data-act="view-inv" data-v="${i.id}"><div class="avatar">${esc(initials(i.pros?.business_name))}</div><div class="main"><strong>${name(i)}</strong><span class="meta">${esc(i.number)} · paid ${fdate(i.paid_at)}${i.payment_method ? ' · ' + esc(i.payment_method) : ''}</span></div>
+      <span class="amt">${money.format(i.total)}</span><div class="end"><button class="btn sm link" data-act="review" data-v="${i.pro_id}">Review</button></div></div>`).join('') : '<div class="empty">No payments yet.</div>'}</div></section>`;
+}
+
+async function payInvoice(id, btn) {
+  busy(btn, true, 'Opening Stripe…');
+  try { const { url } = await api('/api/checkout', { invoiceId: id }); location.href = url; }
+  catch (e) { busy(btn, false); toast(friendly(e)); }
+}
+
+/* ---------------- public pay link ---------------- */
+async function vPay() {
+  let inv;
+  try { inv = await api('/api/invoice?id=' + encodeURIComponent(st.payId)); }
+  catch (e) { return `<div class="paywrap"><div class="card pad stack"><h1>Invoice not found</h1><p class="muted">${esc(friendly(e))}</p></div></div>`; }
+  const s = invStatus(inv);
+  let action = '';
+  if (inv.status === 'paid') action = `<p class="ok">Paid ${fdate(inv.paid_at, true)}${inv.payment_method ? ' · ' + esc(inv.payment_method) : ''}. Thank you!</p>`;
+  else if (inv.status === 'void') action = '<p class="err">This invoice was canceled by the pro. Nothing is due.</p>';
+  else if (inv.accepts_cards && cfg.payments) action = `<button class="btn primary full" data-act="pay" data-v="${inv.id}">Pay ${money.format(inv.total)} by card</button><p class="small muted" style="text-align:center">You'll finish paying on Stripe's secure checkout page.</p>`;
+  else action = `<p class="muted">${esc(inv.pro.business_name || 'This pro')} doesn't take card payments on Probrero yet. Please pay them directly.</p>`;
+  return `<div class="paywrap"><div class="card pad stack" style="gap:22px">${invDoc(inv, inv.pro, s)}${action}</div>
+    ${st.user ? '' : '<p class="small muted" style="text-align:center">Have a Probrero account? <button class="btn link small" data-act="signin">Log in</button> to see all your bills in one place.</p>'}</div>`;
+}
+async function vPaid() {
+  return `<div class="paywrap"><div class="card pad stack" style="text-align:center;gap:16px" id="paidbox">
+    <div class="big-ok" aria-hidden="true">✓</div><h1>Payment sent</h1><p class="muted" id="paidmsg">Confirming with Stripe…</p></div></div>`;
+}
+async function pollPaid() {
+  for (let i = 0; i < 10; i++) {
+    try {
+      const inv = await api('/api/invoice?id=' + encodeURIComponent(st.payId));
+      const el = $('#paidmsg'); if (!el) return;
+      if (inv.status === 'paid') {
+        el.innerHTML = `You paid ${money.format(inv.total)} to ${esc(inv.pro.business_name || 'your pro')} for invoice ${esc(inv.number)}. Stripe emails your receipt.`;
+        $('#paidbox').insertAdjacentHTML('beforeend', st.user ? '<div><button class="btn" data-act="tab" data-v="bills">Go to Bills</button></div>' : '');
+        return;
+      }
+    } catch (e) { /* keep trying */ }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  const el = $('#paidmsg'); if (el) el.textContent = 'Stripe is still processing your payment. The invoice will show as paid in a few minutes.';
+}
+
+function invDoc(i, pro, s) {
+  const items = Array.isArray(i.items) ? i.items : [];
+  return `<div class="doc">
+    <div class="doc-head"><div><span class="label">Invoice</span><div class="num" style="font-size:1.3rem">${esc(i.number)}</div><div class="small muted">Issued ${fdate(i.issued_on, 1)} · Due ${fdate(i.due_on, 1)}</div></div>${pill(s || invStatus(i))}</div>
+    <div class="formgrid small"><div><span class="label">From</span><div><strong>${esc(pro?.business_name || '')}</strong></div><div class="muted">${esc(pro?.trade || '')}${pro?.license ? '<br>' + esc(pro.license) : ''}</div></div>
+      <div><span class="label">Bill to</span><div><strong>${esc(i.customer_name)}</strong></div>${i.customer_email ? `<div class="muted">${esc(i.customer_email)}</div>` : ''}</div></div>
+    <table><thead><tr><th>Description</th><th class="rt">Qty</th><th class="rt">Rate</th><th class="rt">Amount</th></tr></thead><tbody>
+    ${items.map((x) => `<tr><td>${esc(x.description)}</td><td class="rt">${esc(x.qty)}</td><td class="rt">${money.format(num(x.rate))}</td><td class="rt">${money.format(num(x.qty) * num(x.rate))}</td></tr>`).join('')}</tbody></table>
+    <div class="total-line"><span>Total</span><span>${money.format(i.total)}</span></div>
+    ${i.notes ? `<p class="small muted" style="white-space:pre-wrap">${esc(i.notes)}</p>` : ''}
+    ${i.status === 'paid' && i.payment_method && !s ? `<p class="ok">Paid ${fdate(i.paid_at, 1)} · ${esc(i.payment_method)}</p>` : ''}
+  </div>`;
+}
+
+/* ---------------- pro: setup + business ---------------- */
+let svc = [];
+function listingForm(p, submitLabel) {
+  p = p || {};
+  svc = (Array.isArray(p.services) && p.services.length ? p.services : [{ name: '', price: '' }]).map((s) => ({ ...s }));
+  return `<form class="stack" data-form="listing" style="gap:18px">
+    <div class="formgrid">
+      <div class="field full"><label for="b-name">Business name</label><input id="b-name" type="text" required maxlength="120" value="${esc(p.business_name || '')}" placeholder="Harbor Line Plumbing"></div>
+      <div class="field"><label for="b-trade">Trade</label><select id="b-trade">${TRADES.map((t) => `<option ${p.trade === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label for="b-reply">Response time</label><select id="b-reply">${REPLY_TIMES.map((t) => `<option ${p.response_time === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label for="b-city">City</label><input id="b-city" type="text" value="${esc(p.city || '')}" placeholder="Long Beach, CA"></div>
+      <div class="field"><label for="b-zip">ZIP code</label><input id="b-zip" type="text" inputmode="numeric" maxlength="10" value="${esc(p.zip || '')}" placeholder="90803"></div>
+      <div class="field"><label for="b-rate">Hourly rate ($)</label><input id="b-rate" type="number" min="0" step="1" value="${p.hourly_rate ?? ''}" placeholder="115"></div>
+      <div class="field"><label for="b-trip">Trip fee ($, 0 if none)</label><input id="b-trip" type="number" min="0" step="1" value="${p.trip_fee ?? ''}" placeholder="65"></div>
+      <div class="field"><label for="b-lic">License or insurance</label><input id="b-lic" type="text" value="${esc(p.license || '')}" placeholder="CSLB C-36 #1048832"></div>
+      <div class="field"><label for="b-years">Years in business</label><input id="b-years" type="number" min="0" step="1" value="${p.years_in_business ?? ''}" placeholder="5"></div>
+      <div class="field full"><label for="b-about">About your business</label><textarea id="b-about" maxlength="1500" placeholder="What you do, the areas you cover, what customers can expect">${esc(p.about || '')}</textarea></div>
+    </div>
+    <div class="stack" style="gap:8px"><span class="label">Services and starting prices</span><div class="items" id="svc"></div>
+      <div><button class="btn link" type="button" data-act="svc-add">+ Add a service</button></div></div>
+    <p class="err" id="listing-err" hidden></p>
+    <div><button class="btn primary" type="submit">${submitLabel}</button></div>
+  </form>`;
+}
+function drawSvc() {
+  const box = $('#svc'); if (!box) return;
+  box.innerHTML = svc.map((s, k) => `<div class="item" style="grid-template-columns:minmax(0,1fr) 110px 28px"><input type="text" aria-label="Service ${k + 1}" data-svc="${k}" data-f="name" value="${esc(s.name)}" placeholder="Drain clearing"><input type="number" aria-label="Price ${k + 1}" data-svc="${k}" data-f="price" min="0" step="1" value="${esc(s.price)}" placeholder="$ price"><button type="button" data-act="svc-rm" data-v="${k}" aria-label="Remove service">×</button></div>`).join('');
+}
+async function vSetup() {
+  return `<div class="head"><div><span class="label">Step 1 of 2</span><h1 style="margin-top:4px">Set up your business</h1><p class="sub">This is your public listing. Customers see it when they search for pros. You can change it any time.</p></div></div>
+  <div class="card pad">${listingForm(null, 'Publish my listing')}</div>`;
+}
+async function vBusiness() {
+  const pay = st.payments;
+  let stripeBox;
+  if (!cfg.payments) stripeBox = '<p class="muted">Card payments aren\'t switched on for this site yet.</p>';
+  else if (pay?.charges_enabled) stripeBox = `<p class="ok">Card payments are on. Customers can pay your invoices online and Stripe deposits the money in your bank.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="stripe-dashboard">Open Stripe dashboard</button><button class="btn link" data-act="stripe-refresh">Refresh status</button></div>`;
+  else if (pay?.stripe_account_id) stripeBox = `<p>Your Stripe setup isn't finished yet. Stripe needs a few more details before you can take card payments.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-act="stripe-connect">Finish Stripe setup</button><button class="btn link" data-act="stripe-refresh">Refresh status</button></div>`;
+  else stripeBox = `<p>Connect a free Stripe account so customers can pay your invoices by card. Stripe deposits the money straight into your bank account.</p>
+    <div><button class="btn primary" data-act="stripe-connect">Connect Stripe</button></div>`;
+  const f = cfg.fee || { percent: 3.9, flatCents: 30 };
+  return `<div class="head"><div><h1>Business</h1><p class="sub">Your public listing and how you get paid.</p></div><button class="btn" data-act="open-pro" data-v="${uid()}">View public listing</button></div>
+  <section><h2>Getting paid</h2><div class="card pad stack">${stripeBox}
+    <p class="small muted">Probrero charges ${f.percent}% + ${money.format(f.flatCents / 100)} per card payment, which includes card processing. Cash and check payments you record yourself are free.</p></div></section>
+  <section><h2>Public listing</h2><div class="card pad">${listingForm(st.pro, 'Save changes')}</div></section>`;
+}
+async function saveListing(form) {
+  const err = $('#listing-err'); err.hidden = true;
+  const row = {
+    id: uid(),
+    business_name: $('#b-name').value.trim(),
+    trade: $('#b-trade').value,
+    response_time: $('#b-reply').value,
+    city: $('#b-city').value.trim(),
+    zip: $('#b-zip').value.trim(),
+    hourly_rate: num($('#b-rate').value),
+    trip_fee: num($('#b-trip').value),
+    license: $('#b-lic').value.trim(),
+    years_in_business: Math.max(0, Math.round(num($('#b-years').value))),
+    about: $('#b-about').value.trim(),
+    services: svc.filter((s) => String(s.name).trim()).map((s) => ({ name: String(s.name).trim(), price: num(s.price) })),
+  };
+  const btn = form.querySelector('[type=submit]');
+  busy(btn, true, 'Saving…');
+  try {
+    const first = !st.pro;
+    st.pro = await q(first ? sb.from('pros').insert(row).select().single() : sb.from('pros').update(row).eq('id', uid()).select().single());
+    toast(first ? 'Your listing is live' : 'Listing saved');
+    if (first) go('dash'); else busy(btn, false);
+  } catch (e) { busy(btn, false); err.textContent = friendly(e); err.hidden = false; }
+}
+async function stripeAction(action, btn) {
+  busy(btn, true, action === 'status' ? 'Checking…' : 'Opening Stripe…');
+  try {
+    const out = await api('/api/stripe-account', { action });
+    if (out.url) { location.href = out.url; return; }
+    st.payments = await q(sb.from('pro_payments').select('*').eq('pro_id', uid()).maybeSingle());
+    toast(out.chargesEnabled ? 'Card payments are on' : out.connected ? 'Stripe still needs a few details' : 'Stripe isn\'t connected yet');
+    render();
+  } catch (e) { busy(btn, false); toast(friendly(e)); }
+}
+async function handleStripeReturn() {
+  const kind = st.stripeReturn; st.stripeReturn = null;
+  if (kind === 'refresh') { toast('That Stripe link expired. Opening a fresh one…'); return stripeAction('onboard'); }
+  st.tab = 'business'; await stripeAction('status');
+}
+
+/* ---------------- pro: dashboard ---------------- */
+async function proData() {
+  const [inv, exp, quotes] = await Promise.all([
+    q(sb.from('invoices').select('*').eq('pro_id', uid()).order('created_at', { ascending: false })),
+    q(sb.from('expenses').select('*').eq('pro_id', uid()).order('spent_on', { ascending: false })),
+    q(sb.from('quotes').select('*').eq('pro_id', uid()).order('created_at', { ascending: false })),
+  ]);
+  return { inv, exp, quotes };
+}
+let CH = [];
+async function vDash() {
+  const { inv, exp, quotes } = await proData();
+  const cut = addDays(-90);
+  const live = inv.filter((i) => i.status !== 'void');
+  const collected = live.filter((i) => i.status === 'paid' && dayOf(i.paid_at) >= cut).reduce((s, i) => s + Number(i.total), 0);
+  const open = live.filter((i) => i.status === 'open');
+  const overdue = open.filter((i) => invStatus(i) === 'overdue');
+  const spent = exp.filter((e) => e.spent_on >= cut).reduce((s, e) => s + Number(e.amount), 0);
+  const reqs = quotes.filter((x) => x.status === 'pending' || (x.status === 'accepted' && !x.invoiced));
+  const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  const first = (st.profile?.full_name || '').split(' ')[0];
+  const cardsOn = Boolean(st.payments?.charges_enabled);
+  const hasData = inv.length || exp.length;
+
+  const steps = [
+    [true, 'Publish your listing', 'Customers can find you now.', ''],
+    [cardsOn || !cfg.payments, 'Turn on card payments', 'Connect Stripe so customers can pay online.', '<button class="btn sm primary" data-act="stripe-connect">Connect Stripe</button>'],
+    [inv.length > 0, 'Send your first invoice', 'Bill a customer and share the pay link.', '<button class="btn sm" data-act="new-inv">New invoice</button>'],
+  ];
+  const showSteps = steps.some((s) => !s[0]);
+  const todo = [
+    ...overdue.map((i) => `<div class="r click" data-act="view-inv" data-v="${i.id}"><div class="main"><strong>${esc(i.customer_name)} is ${daysBetween(i.due_on, today())} day${daysBetween(i.due_on, today()) === 1 ? '' : 's'} late</strong><span class="meta">${esc(i.number)} · ${money.format(i.total)}</span></div></div>`),
+    ...reqs.map((x) => `<div class="r"><div class="main"><strong>${x.status === 'pending' ? 'Quote request: ' : 'Accepted: '}${esc(x.customer_name)}</strong><span class="meta">${esc(x.description.length > 48 ? x.description.slice(0, 48) + '…' : x.description)}</span></div>${x.status === 'pending' ? '<button class="btn sm" data-act="tab" data-v="requests">Reply</button>' : `<button class="btn sm" data-act="q-invoice" data-v="${x.id}">Invoice</button>`}</div>`),
+  ];
+  let payBox = '';
+  if (cfg.payments) payBox = cardsOn
+    ? `<div class="card pad stack"><h2>Getting paid</h2><span class="paystate on"><i></i>Card payments on</span><button class="btn link" style="align-self:flex-start" data-act="stripe-dashboard">Open Stripe dashboard</button></div>`
+    : `<div class="card pad stack"><h2>Getting paid</h2><span class="paystate"><i></i>Card payments off</span><p class="small muted">Connect Stripe so customers can pay your invoices online.</p><button class="btn primary" data-act="stripe-connect">Connect Stripe</button></div>`;
+
+  return `<div class="head"><div><span class="label">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span><h1 style="margin-top:4px">${greet}${first ? ', ' + esc(first) : ''}</h1></div></div>
+  ${showSteps ? `<section><h2>Get set up</h2><div class="card pad checklist">${steps.map(([done, t, d, btn], k) => `<div class="${done ? 'done' : ''}"><span class="dot">${done ? '✓' : k + 1}</span><div class="main"><strong>${t}</strong><div class="small muted">${d}</div></div>${done ? '' : btn}</div>`).join('')}</div></section>` : ''}
+  <div class="dash">
+    <div class="stack" style="gap:24px">
+      ${hasData ? `<div class="kpis">
+        <div class="kpi feature"><div><span class="label">Collected · last 90 days</span><strong>${money0.format(collected)}</strong></div><span class="net">Profit ${money0.format(collected - spent)} after expenses</span></div>
+        <div class="card kpi"><span class="label">Outstanding</span><strong>${money0.format(open.reduce((s, i) => s + Number(i.total), 0))}</strong><span class="small muted">${open.length} unpaid</span></div>
+        <div class="card kpi"><span class="label">Overdue</span><strong class="${overdue.length ? 'neg' : ''}">${money0.format(overdue.reduce((s, i) => s + Number(i.total), 0))}</strong><span class="small muted">${overdue.length} invoice${overdue.length === 1 ? '' : 's'}</span></div>
+        <div class="card kpi"><span class="label">Expenses · 90 days</span><strong>${money0.format(spent)}</strong><span class="small muted">${exp.filter((e) => e.spent_on >= cut).length} receipts</span></div>
+      </div>
+      <div class="card chart-card"><div class="sec-head" style="flex-wrap:wrap"><h2>Last 6 months</h2><div class="legend"><span><i style="background:var(--accent)"></i>Collected</span><span><i style="background:var(--exp)"></i>Expenses</span></div></div>${chart(live, exp)}</div>` : ''}
+      <section><div class="sec-head"><h2>Recent invoices</h2><button class="btn link" data-act="tab" data-v="invoices">View all</button></div>
+        <div class="card rows">${inv.length ? invRows(inv.slice(0, 6)) : '<div class="empty">No invoices yet.<button class="btn primary" data-act="new-inv">Create your first invoice</button></div>'}</div></section>
+    </div>
+    <aside class="rail">
+      <div class="card pad quick"><h2 style="margin-bottom:6px">Quick actions</h2>
+        <button class="btn primary full" data-act="new-inv">${icon('plus', 18)}New invoice</button>
+        <button class="btn full" data-act="add-exp">Add expense</button>
+        <button class="btn full" data-act="open-pro" data-v="${uid()}">View my listing</button></div>
+      <section><h2>To do${todo.length ? ` <span class="count">${todo.length}</span>` : ''}</h2><div class="card rows">${todo.length ? todo.join('') : '<div class="empty">You\'re all caught up.</div>'}</div></section>
+      ${payBox}
+    </aside>
+  </div>`;
+}
+function chart(inv, exp) {
+  const now = new Date(), months = [];
+  for (let k = 5; k >= 0; k--) { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); months.push({ key: ymd(d).slice(0, 7), lab: d.toLocaleDateString('en-US', { month: 'short' }), full: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), inc: 0, exp: 0 }); }
+  const find = (s) => months.find((o) => o.key === dayOf(s).slice(0, 7));
+  inv.forEach((i) => { if (i.status === 'paid' && i.paid_at) { const o = find(i.paid_at); if (o) o.inc += Number(i.total); } });
+  exp.forEach((e) => { const o = find(e.spent_on); if (o) o.exp += Number(e.amount); });
+  CH = months;
+  const mx = Math.max(...months.map((o) => Math.max(o.inc, o.exp)), 1);
+  const step = mx > 20000 ? 5000 : mx > 6000 ? 2000 : mx > 3000 ? 1000 : mx > 1500 ? 500 : mx > 400 ? 250 : 100;
+  const top = Math.ceil(mx / step) * step;
+  const W = 720, H = 240, L = 48, B = 26, Tp = 8, cw = (W - L) / 6, bw = Math.min(26, cw / 4);
+  const y = (v) => Tp + (H - Tp - B) * (1 - v / top), base = y(0);
+  const bar = (x, v, c) => { const h = base - y(v); if (h <= 0) return ''; const r = Math.min(4, h); return `<path d="M${x},${base} V${base - h + r} Q${x},${base - h} ${x + r},${base - h} H${x + bw - r} Q${x + bw},${base - h} ${x + bw},${base - h + r} V${base} Z" fill="${c}"/>`; };
+  let g = '';
+  for (let t = 0; t <= top; t += step) g += `<line x1="${L}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1" ${t ? 'stroke-dasharray="2 4"' : ''}/><text x="${L - 10}" y="${y(t) + 4}" text-anchor="end" font-size="13" fill="var(--faint)" font-family="IBM Plex Mono, monospace">${t >= 1000 ? '$' + t / 1000 + 'k' : '$' + t}</text>`;
+  const cols = months.map((o, k) => { const cx = L + cw * k + cw / 2; return `<g class="m" data-k="${k}"><rect class="col-bg" x="${cx - cw / 2 + 6}" y="${Tp}" width="${cw - 12}" height="${base - Tp}" rx="8"/>${bar(cx - bw - 1, o.inc, 'var(--accent)')}${bar(cx + 1, o.exp, 'var(--exp)')}<text x="${cx}" y="${H - 6}" text-anchor="middle" font-size="14" fill="var(--muted)">${o.lab}</text><rect class="hit" x="${cx - cw / 2}" y="0" width="${cw}" height="${H}"/></g>`; }).join('');
+  return `<div class="plot" id="plot"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Money collected and expenses by month, last six months">${g}${cols}</svg><div class="tip" id="tip" hidden></div></div>
+  <table class="sr-only"><caption>Monthly totals</caption><tr><th>Month</th><th>Collected</th><th>Expenses</th></tr>${months.map((o) => `<tr><td>${o.full}</td><td>${money0.format(o.inc)}</td><td>${money0.format(o.exp)}</td></tr>`).join('')}</table>`;
+}
+function wireChart() {
+  const plot = $('#plot'), tip = $('#tip'); if (!plot) return;
+  const show = (g) => {
+    const o = CH[+g.dataset.k];
+    plot.querySelectorAll('g.m').forEach((x) => x.classList.toggle('on', x === g));
+    tip.innerHTML = `<b>${o.full}</b><br><i style="background:var(--accent)"></i>Collected ${money0.format(o.inc)}<br><i style="background:var(--exp)"></i>Expenses ${money0.format(o.exp)}<br>Net ${money0.format(o.inc - o.exp)}`;
+    tip.hidden = false;
+    const pb = plot.getBoundingClientRect(), gb = g.getBoundingClientRect(), w = tip.offsetWidth;
+    tip.style.left = Math.max(w / 2, Math.min(pb.width - w / 2, gb.left - pb.left + gb.width / 2)) + 'px';
+    tip.style.top = '-6px';
+  };
+  plot.querySelectorAll('g.m').forEach((g) => { g.addEventListener('mouseenter', () => show(g)); g.addEventListener('click', () => show(g)); });
+  plot.addEventListener('mouseleave', () => { tip.hidden = true; plot.querySelectorAll('g.m').forEach((x) => x.classList.remove('on')); });
+}
+
+/* ---------------- pro: invoices ---------------- */
+function invRows(list) {
+  if (!list.length) return '<div class="empty">No invoices yet.</div>';
+  return list.map((i) => `<div class="r click" data-act="view-inv" data-v="${i.id}"><div class="main"><strong>${esc(i.customer_name)}</strong><span class="meta">${esc(i.number)} · ${i.status === 'paid' ? 'paid ' + fdate(i.paid_at) : i.status === 'void' ? 'canceled' : 'due ' + fdate(i.due_on)}</span></div><span class="amt">${money.format(i.total)}</span><div class="end" style="min-width:90px">${pill(invStatus(i))}</div></div>`).join('');
+}
+async function vInvoices() {
+  const all = await q(sb.from('invoices').select('*').eq('pro_id', uid()).order('created_at', { ascending: false }));
+  const f = st.invFilter;
+  const list = all.filter((i) => f === 'All' || (f === 'Unpaid' && i.status === 'open') || (f === 'Overdue' && invStatus(i) === 'overdue') || (f === 'Paid' && i.status === 'paid'));
+  return `<div class="head"><div><h1>Invoices</h1><p class="sub">Each invoice gets a pay link. Customers with a Probrero account also see it under their Bills.</p></div><button class="btn primary" data-act="new-inv">New invoice</button></div>
+  <div class="chips">${['All', 'Unpaid', 'Overdue', 'Paid'].map((x) => `<button class="chip" data-act="inv-filter" data-v="${x}" aria-pressed="${f === x}">${x}</button>`).join('')}</div>
+  <div class="card rows">${list.length ? invRows(list) : `<div class="empty">${all.length ? 'No invoices match this filter.' : 'No invoices yet.<button class="btn primary" data-act="new-inv">Create your first invoice</button>'}</div>`}</div>`;
+}
+
+/* ---------------- pro: quote requests ---------------- */
+async function vRequests() {
+  const ord = { pending: 0, accepted: 1, quoted: 2, declined: 3 };
+  const qs = (await q(sb.from('quotes').select('*').eq('pro_id', uid()).order('created_at', { ascending: false }))).sort((a, b) => ord[a.status] - ord[b.status]);
+  return `<div class="head"><div><h1>Quote requests</h1><p class="sub">Customers who found you on Probrero. Reply with a price, then send the invoice when they accept.</p></div></div>
+  <div class="stack" style="gap:16px">${qs.length ? qs.map((x) => `
+  <article class="card quote">
+    <div class="sec-head"><div><h3>${esc(x.customer_name || 'Customer')}</h3><div class="small muted">${x.zip ? 'ZIP ' + esc(x.zip) + ' · ' : ''}${x.timing ? esc(x.timing) + ' · ' : ''}${fdate(x.created_at)}</div></div>${pill(x.status)}</div>
+    <p class="desc">${esc(x.description)}</p>
+    ${x.status === 'pending' ? `<form class="formgrid" data-form="reply" data-v="${x.id}" style="padding-top:14px;border-top:1px solid var(--line)">
+      <div class="field"><label for="amt-${x.id}">Your price ($)</label><input id="amt-${x.id}" type="number" min="1" step="0.01" required placeholder="250"></div>
+      <div class="field"><label for="note-${x.id}">What's included</label><input id="note-${x.id}" type="text" maxlength="300" placeholder="Labor, parts, trip fee"></div>
+      <div class="full" style="display:flex;gap:8px"><button class="btn primary" type="submit">Send quote</button><button class="btn" type="button" data-act="q-pass" data-v="${x.id}">Pass on this job</button></div></form>` : ''}
+    ${x.status === 'quoted' ? `<div class="offer"><div><span class="label">You quoted</span><br><strong>${money.format(x.amount)}</strong></div><span class="small muted">Waiting for ${esc(x.customer_name || 'the customer')} to accept</span></div>` : ''}
+    ${x.status === 'accepted' ? `<div class="offer"><div><span class="label">Accepted at</span><br><strong>${money.format(x.amount)}</strong></div>${x.invoiced ? '<span class="small muted">Invoice sent</span>' : `<button class="btn primary" data-act="q-invoice" data-v="${x.id}">Create invoice</button>`}</div>` : ''}
+  </article>`).join('') : '<div class="card empty">No requests yet. Requests show up here when customers ask you for a quote.<button class="btn" data-act="open-pro" data-v="' + uid() + '">Preview your listing</button></div>'}</div>`;
+}
+
+/* ---------------- pro: expenses ---------------- */
+async function vExpenses() {
+  const list = await q(sb.from('expenses').select('*').eq('pro_id', uid()).order('spent_on', { ascending: false }));
+  const yr = String(new Date().getFullYear());
+  const cats = {};
+  list.filter((e) => e.spent_on.startsWith(yr)).forEach((e) => (cats[e.category] = (cats[e.category] || 0) + Number(e.amount)));
+  const tot = Object.values(cats).reduce((a, b) => a + b, 0), mx = Math.max(...Object.values(cats), 1);
+  return `<div class="head"><div><h1>Expenses</h1><p class="sub">Log what the business spends so you know your real profit and have receipts ready at tax time.</p></div><button class="btn primary" data-act="add-exp">Add expense</button></div>
+  ${list.length ? `<div class="split" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
+    <div class="card rows">${list.map((e) => `<div class="r"><div class="main"><strong>${esc(e.vendor)}</strong><span class="meta">${fdate(e.spent_on)} · ${esc(e.category)}</span></div><span class="amt">${money.format(e.amount)}</span><div class="end">${e.receipt_path ? `<button class="btn sm link" data-act="receipt" data-v="${esc(e.receipt_path)}">Receipt</button>` : ''}<button class="btn sm link danger" data-act="del-exp" data-v="${e.id}" aria-label="Delete expense">Delete</button></div></div>`).join('')}</div>
+    <div class="card pad stack" style="gap:10px"><div class="sec-head"><h2>${yr} by category</h2><span class="num">${money0.format(tot)}</span></div>
+      <div>${Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="cat"><div class="sec-head small"><span>${esc(c)}</span><span class="num">${money0.format(v)}</span></div><div class="catbar"><i style="width:${((v / mx) * 100).toFixed(1)}%"></i></div></div>`).join('') || '<p class="muted small">Nothing logged this year yet.</p>'}</div></div>
+  </div>` : '<div class="card empty">No expenses yet. Add materials, fuel, tools and other costs to see your real profit.<button class="btn primary" data-act="add-exp">Add your first expense</button></div>'}`;
+}
+
+/* ---------------- views registry ---------------- */
+const VIEWS = { home: vHome, find: vFind, pro: vProfile, quotes: vQuotes, bills: vBills, pay: vPay, paid: vPaid, setup: vSetup, business: vBusiness, dash: vDash, invoices: vInvoices, requests: vRequests, expenses: vExpenses };
+const AFTER = { find: drawResults, dash: wireChart, paid: pollPaid, setup: drawSvc, business: drawSvc };
+
+/* ---------------- modals ---------------- */
+function openModal(html) { $('#sheet').innerHTML = html; $('#modal').hidden = false; const f = $('#sheet').querySelector('input:not([type=radio]):not([type=hidden]),textarea'); if (f) f.focus(); }
+function closeModal() { $('#modal').hidden = true; $('#sheet').innerHTML = ''; }
+const mh = (eyebrow, title) => `<div class="sec-head" style="align-items:flex-start"><div>${eyebrow ? `<span class="label">${eyebrow}</span>` : ''}<h2 style="font-size:1.4rem;margin-top:2px">${title}</h2></div><button class="btn sm" data-act="close" type="button">Close</button></div>`;
+
+function mAuth(mode, role, note) {
+  mode = mode || 'signin';
+  const seg = `<div class="seg" role="group"><button type="button" data-act="auth-mode" data-v="signin" aria-pressed="${mode === 'signin'}">Log in</button><button type="button" data-act="auth-mode" data-v="signup" aria-pressed="${mode === 'signup'}">Create account</button></div>`;
+  let body;
+  if (mode === 'signup') body = `<form class="stack" data-form="signup">
+      <fieldset style="border:0;padding:0;margin:0" class="stack"><legend>I want to</legend><div class="choice">
+        <label><input type="radio" name="role" value="customer" ${role !== 'pro' ? 'checked' : ''}><span><strong>Hire a pro</strong><br><span class="small muted">Find trades, get quotes, pay bills</span></span></label>
+        <label><input type="radio" name="role" value="pro" ${role === 'pro' ? 'checked' : ''}><span><strong>Run my business</strong><br><span class="small muted">Get listed, send invoices, get paid</span></span></label></div></fieldset>
+      <div class="field"><label for="a-name">Full name</label><input id="a-name" type="text" required maxlength="120" autocomplete="name"></div>
+      <div class="field"><label for="a-email">Email</label><input id="a-email" type="email" required autocomplete="email"></div>
+      <div class="field"><label for="a-pass">Password</label><input id="a-pass" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></div>
+      <p class="err" id="a-err" hidden></p>
+      <button class="btn primary" type="submit">Create account</button></form>`;
+  else if (mode === 'forgot') body = `<form class="stack" data-form="forgot">
+      <p class="muted">Enter your email and we'll send you a link to set a new password.</p>
+      <div class="field"><label for="a-email">Email</label><input id="a-email" type="email" required autocomplete="email"></div>
+      <p class="err" id="a-err" hidden></p>
+      <button class="btn primary" type="submit">Send reset link</button>
+      <button class="btn link" type="button" data-act="auth-mode" data-v="signin">Back to log in</button></form>`;
+  else body = `<form class="stack" data-form="signin">
+      <div class="field"><label for="a-email">Email</label><input id="a-email" type="email" required autocomplete="email"></div>
+      <div class="field"><label for="a-pass">Password</label><input id="a-pass" type="password" required autocomplete="current-password"></div>
+      <p class="err" id="a-err" hidden></p>
+      <button class="btn primary" type="submit">Log in</button>
+      <button class="btn link" type="button" data-act="auth-mode" data-v="forgot">Forgot your password?</button></form>`;
+  openModal(mh('', mode === 'signup' ? 'Join Probrero' : mode === 'forgot' ? 'Reset your password' : 'Welcome back') + (note ? `<p class="muted">${esc(note)}</p>` : '') + (mode === 'forgot' ? '' : seg) + body);
+}
+function authErr(m) { const e = $('#a-err'); if (e) { e.textContent = m; e.hidden = false; } }
+function authDone(html) { $('#sheet').innerHTML = mh('', 'Check your email') + html; }
+
+function mNewPassword() {
+  st.recovery = false;
+  openModal(mh('', 'Set a new password') + `<form class="stack" data-form="newpass">
+    <div class="field"><label for="np">New password</label><input id="np" type="password" required minlength="8" autocomplete="new-password"></div>
+    <p class="err" id="a-err" hidden></p><button class="btn primary" type="submit">Save password</button></form>`);
+}
+
+function mAccount() {
+  openModal(mh(isPro() ? 'Pro account' : 'Customer account', esc(st.profile?.full_name || 'Your account')) + `
+  <form class="stack" data-form="account">
+    <div class="field"><label for="ac-name">Full name</label><input id="ac-name" type="text" required maxlength="120" value="${esc(st.profile?.full_name || '')}"></div>
+    <div class="field"><label>Email</label><input type="text" value="${esc(st.user.email)}" disabled></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-act="signout">Log out</button></div>
+  </form>
+  <p class="small muted">Need to change your email or delete your account? Contact Probrero support.</p>`);
+}
+
+function mQuote(proId) {
+  const p = (st.pros || []).find((x) => x.id === proId);
+  openModal(mh('Free quote', esc(p?.business_name || 'Request a quote')) + `
+  <form class="formgrid" data-form="quote" data-v="${esc(proId)}">
+    <div class="field full"><label for="qd">Describe the job</label><textarea id="qd" required minlength="5" maxlength="4000" placeholder="What's going on, where in the home, anything you've tried"></textarea></div>
+    <div class="field"><label for="qw">When</label><select id="qw"><option>As soon as possible</option><option>Within 3 days</option><option selected>This week</option><option>Flexible</option></select></div>
+    <div class="field"><label for="qz">ZIP code</label><input id="qz" type="text" inputmode="numeric" maxlength="10" placeholder="90803"></div>
+    <p class="err full" id="q-err" hidden></p>
+    <div class="full"><button class="btn primary full" type="submit">Send request</button></div>
+  </form>`);
+}
+
+async function mViewInv(id) {
+  const i = await q(sb.from('invoices').select('*, pros(business_name, trade, license)').eq('id', id).single());
+  const asPro = i.pro_id === uid();
+  let actions = '';
+  if (asPro && i.status === 'open') actions = `
+    <div class="stack" style="gap:8px"><span class="label">Pay link</span><div class="linkbox"><input id="paylink" type="text" readonly value="${esc(payLink(i.id))}" aria-label="Pay link"><button class="btn" data-act="copy-link">Copy</button></div>
+      <p class="small muted">Text or email this link to ${esc(i.customer_name)}.${i.customer_id ? ' It also shows in their Probrero account.' : ''}</p></div>
+    <div class="formgrid" style="align-items:end"><div class="field"><label for="pm">Got paid another way?</label><select id="pm"><option>Cash</option><option>Check</option><option>Zelle</option><option>Venmo</option><option>Other</option></select></div>
+      <div style="display:flex;gap:8px"><button class="btn" data-act="mark-paid" data-v="${i.id}">Mark as paid</button><button class="btn link danger" data-act="void-inv" data-v="${i.id}">Cancel invoice</button></div></div>`;
+  else if (!asPro && i.status === 'open') actions = `<button class="btn primary full" data-act="pay" data-v="${i.id}">Pay ${money.format(i.total)} by card</button>`;
+  openModal(mh('', i.status === 'paid' && !asPro ? 'Receipt' : 'Invoice') + invDoc(i, i.pros) + actions);
+}
+
+function mConfirm(title, text, act, v, label) {
+  openModal(mh('', title) + `<p class="muted">${text}</p><div style="display:flex;gap:8px"><button class="btn primary" data-act="${act}" data-v="${esc(v)}">${label}</button><button class="btn" data-act="close">Keep it</button></div>`);
+}
+
+let draft = null;
+async function mNewInv(pref) {
+  if (!st.pro) return go('setup');
+  const [nums, quotes] = await Promise.all([
+    q(sb.from('invoices').select('number').eq('pro_id', uid())),
+    q(sb.from('quotes').select('customer_id, customer_name').eq('pro_id', uid())),
+  ]);
+  const prefix = initials(st.pro.business_name).slice(0, 3) || 'INV';
+  const seq = Math.max(1000, ...nums.map((n) => parseInt(String(n.number).split('-').pop(), 10)).filter(Number.isFinite)) + 1;
+  const custs = [...new Map(quotes.map((x) => [x.customer_id, x.customer_name])).entries()];
+  draft = Object.assign({ customerId: '', items: [{ description: '', qty: 1, rate: '' }], quoteId: null, number: prefix + '-' + seq }, pref || {});
+  openModal(mh(esc(draft.number), 'New invoice') + `
+  <form data-form="inv" class="stack" style="gap:18px">
+    <div class="formgrid">
+      <div class="field full"><label for="ic-who">Customer</label><select id="ic-who">${custs.length ? '' : ''}<option value="">Someone new</option>${custs.map(([id, n]) => `<option value="${id}" ${draft.customerId === id ? 'selected' : ''}>${esc(n || 'Customer')} (from a quote)</option>`).join('')}</select></div>
+      <div class="field" data-newcust><label for="ic-name">Customer name</label><input id="ic-name" type="text" maxlength="120" placeholder="Name or business"></div>
+      <div class="field" data-newcust><label for="ic-email">Customer email (optional)</label><input id="ic-email" type="email" placeholder="they@example.com"></div>
+      <div class="field"><label for="ic-terms">Due</label><select id="ic-terms"><option value="0">On receipt</option><option value="7">In 7 days</option><option value="15" selected>In 15 days</option><option value="30">In 30 days</option></select></div>
+    </div>
+    <div class="stack" style="gap:8px"><div class="item small muted"><span>Item</span><span>Qty</span><span>Rate</span><span></span></div><div class="items" id="items"></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn link" type="button" data-act="add-item">+ Add line</button>${num(st.pro.trip_fee) > 0 ? '<button class="btn link" type="button" data-act="add-trip">+ Trip fee</button>' : ''}${num(st.pro.hourly_rate) > 0 ? '<button class="btn link" type="button" data-act="add-labor">+ Labor hours</button>' : ''}</div></div>
+    <div class="field"><label for="ic-notes">Note (optional)</label><input id="ic-notes" type="text" maxlength="500" placeholder="Thanks for your business. 90-day labor warranty."></div>
+    <div><div class="total-line"><span>Total</span><span id="itot">$0.00</span></div><p class="small muted" id="inet" style="margin-top:6px"></p></div>
+    <p class="err" id="inv-err" hidden></p>
+    <button class="btn primary" type="submit">Create invoice</button>
+  </form>`);
+  toggleNewCust(); drawItems();
+}
+function toggleNewCust() { const who = $('#ic-who'); if (!who) return; document.querySelectorAll('[data-newcust]').forEach((el) => (el.hidden = Boolean(who.value))); }
+function drawItems() {
+  $('#items').innerHTML = draft.items.map((x, k) => `<div class="item"><input type="text" aria-label="Item ${k + 1}" id="d-${k}" data-k="${k}" data-f="description" value="${esc(x.description)}" placeholder="Labor, part, service" maxlength="200"><input type="number" aria-label="Quantity ${k + 1}" data-k="${k}" data-f="qty" value="${esc(x.qty)}" min="0" step="any"><input type="number" aria-label="Rate ${k + 1}" data-k="${k}" data-f="rate" value="${esc(x.rate)}" min="0" step="0.01" placeholder="0.00"><button type="button" data-act="rm-item" data-v="${k}" aria-label="Remove line">×</button></div>`).join('');
+  updTot();
+}
+function updTot() {
+  const t = invTotal(draft.items), el = $('#itot'); if (!el) return;
+  el.textContent = money.format(t);
+  const net = $('#inet');
+  if (net) net.textContent = st.payments?.charges_enabled && t >= 0.5 ? `If paid by card, you receive about ${money.format(t - platformFee(Math.round(t * 100)) / 100)} after Probrero and card fees.` : '';
+}
+
+function mExp() {
+  openModal(mh('', 'Add expense') + `
+  <form class="formgrid" data-form="exp">
+    <div class="field"><label for="ea">Amount ($)</label><input id="ea" type="number" min="0" step="0.01" required placeholder="0.00"></div>
+    <div class="field"><label for="ed">Date</label><input id="ed" type="date" value="${today()}" required></div>
+    <div class="field"><label for="ev">Vendor</label><input id="ev" type="text" required maxlength="120" placeholder="Supply house, gas station"></div>
+    <div class="field"><label for="ecat">Category</label><select id="ecat">${EXPENSE_CATS.map((c) => `<option>${c}</option>`).join('')}</select></div>
+    <div class="field full"><label for="ef">Receipt photo or PDF (optional)</label><input id="ef" type="file" accept="image/*,application/pdf"></div>
+    <p class="err full" id="exp-err" hidden></p>
+    <div class="full"><button class="btn primary full" type="submit">Save expense</button></div>
+  </form>`);
+}
+
+function mReview(proId) {
+  openModal(mh('Review', 'How did it go?') + `
+  <form class="stack" data-form="review" data-v="${esc(proId)}">
+    <fieldset style="border:0;padding:0;margin:0"><legend>Your rating</legend><div class="starpick" id="starpick">${[1, 2, 3, 4, 5].map((n) => `<label class="on"><input type="radio" name="st" value="${n}" ${n === 5 ? 'checked' : ''}>★</label>`).join('')}</div></fieldset>
+    <div class="field"><label for="rt">Your review</label><textarea id="rt" required minlength="3" maxlength="2000" placeholder="On time? Did the price match the quote? Would you hire them again?"></textarea></div>
+    <p class="small muted">Only customers who paid this pro through Probrero can leave a review.</p>
+    <p class="err" id="r-err" hidden></p>
+    <button class="btn primary" type="submit">Post review</button>
+  </form>`);
+}
+
+/* ---------------- actions ---------------- */
+function needAccount(note, after) { st.afterAuth = after || null; mAuth('signup', 'customer', note); }
+
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act, v = t.dataset.v;
+  if (t.tagName === 'A') e.preventDefault();
+  try {
+    switch (a) {
+      case 'home': st.payId = null; defaultTab(); return go(st.tab);
+      case 'reload': return render();
+      case 'tab': return go(v);
+      case 'trade': st.trade = v; document.querySelectorAll('[data-act=trade]').forEach((c) => c.setAttribute('aria-pressed', c.dataset.v === v)); return drawResults();
+      case 'pick-trade': st.trade = v; st.q = ''; return go('find');
+      case 'signup': return mAuth('signup', 'customer');
+      case 'open-pro': st.proId = v; return go('pro');
+      case 'signin': return mAuth('signin');
+      case 'signup-pro': return mAuth('signup', 'pro');
+      case 'auth-mode': return mAuth(v, document.querySelector('input[name=role]:checked')?.value);
+      case 'account': return mAccount();
+      case 'signout': closeModal(); await sb.auth.signOut(); toast('Logged out'); return;
+      case 'close': return closeModal();
+      case 'ask-quote':
+        if (!st.user) return needAccount('Create a free account to request quotes and pay invoices. Already have one? Use Log in.', { act: 'quote', proId: v });
+        if (isPro()) return toast('Pro accounts can\'t request quotes. Use a customer account to hire.');
+        if (!st.pros) st.pros = await q(sb.from('pro_directory').select('*'));
+        return mQuote(v);
+      case 'review': return mReview(v);
+      case 'view-inv': return mViewInv(v);
+      case 'pay': return payInvoice(v, t);
+      case 'new-inv': return mNewInv();
+      case 'add-exp': return mExp();
+      case 'inv-filter': st.invFilter = v; return render();
+      case 'copy-link': {
+        const inp = $('#paylink');
+        try { await navigator.clipboard.writeText(inp.value); toast('Pay link copied'); } catch (_) { inp.select(); toast('Select the link and copy it'); }
+        return;
+      }
+      case 'mark-paid': {
+        busy(t, true, 'Saving…');
+        await q(sb.from('invoices').update({ status: 'paid', payment_method: $('#pm').value }).eq('id', v));
+        closeModal(); toast('Marked as paid'); return render();
+      }
+      case 'void-inv': return mConfirm('Cancel this invoice?', 'The customer won\'t be able to pay it, and it stops counting as money owed. This can\'t be undone.', 'void-yes', v, 'Cancel invoice');
+      case 'void-yes': await q(sb.from('invoices').update({ status: 'void' }).eq('id', v)); closeModal(); toast('Invoice canceled'); return render();
+      case 'add-item': draft.items.push({ description: '', qty: 1, rate: '' }); drawItems(); $('#d-' + (draft.items.length - 1)).focus(); return;
+      case 'add-trip': draft.items.push({ description: 'Trip fee', qty: 1, rate: num(st.pro.trip_fee) }); return drawItems();
+      case 'add-labor': draft.items.push({ description: 'Labor (hours)', qty: 1, rate: num(st.pro.hourly_rate) }); return drawItems();
+      case 'rm-item': if (draft.items.length > 1) { draft.items.splice(+v, 1); drawItems(); } return;
+      case 'svc-add': svc.push({ name: '', price: '' }); return drawSvc();
+      case 'svc-rm': svc.splice(+v, 1); if (!svc.length) svc.push({ name: '', price: '' }); return drawSvc();
+      case 'stripe-connect': return stripeAction('onboard', t);
+      case 'stripe-refresh': return stripeAction('status', t);
+      case 'stripe-dashboard': return stripeAction('dashboard', t);
+      case 'q-accept': await q(sb.from('quotes').update({ status: 'accepted' }).eq('id', v)); toast('Quote accepted. The pro will send your invoice.'); return render();
+      case 'q-decline': await q(sb.from('quotes').update({ status: 'declined' }).eq('id', v)); toast('Quote declined'); return render();
+      case 'q-cancel': await q(sb.from('quotes').update({ status: 'declined' }).eq('id', v)); toast('Request canceled'); return render();
+      case 'q-pass': await q(sb.from('quotes').update({ status: 'declined' }).eq('id', v)); toast('Request closed'); return render();
+      case 'q-invoice': {
+        const x = await q(sb.from('quotes').select('*').eq('id', v).single());
+        return mNewInv({ customerId: x.customer_id, quoteId: x.id, items: [{ description: x.note || x.description.slice(0, 120), qty: 1, rate: x.amount }] });
+      }
+      case 'receipt': {
+        const w = window.open('', '_blank');
+        const { data, error } = await sb.storage.from('receipts').createSignedUrl(v, 120);
+        if (error) { if (w) w.close(); throw error; }
+        if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+        return;
+      }
+      case 'del-exp': return mConfirm('Delete this expense?', 'It will be removed from your records.', 'del-exp-yes', v, 'Delete');
+      case 'del-exp-yes': await q(sb.from('expenses').delete().eq('id', v)); closeModal(); toast('Expense deleted'); return render();
+    }
+  } catch (err) { console.error(err); busy(t, false); toast(friendly(err)); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('#modal').hidden) closeModal();
+  if (e.key === 'Enter' && e.target.classList?.contains('result')) { st.proId = e.target.dataset.v; go('pro'); }
+});
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.id === 'q') { st.q = el.value; return drawResults(); }
+  if (el.id === 'fzip') { st.zip = el.value; return drawResults(); }
+  if (el.dataset.k != null && draft) { draft.items[+el.dataset.k][el.dataset.f] = el.value; return updTot(); }
+  if (el.dataset.svc != null) svc[+el.dataset.svc][el.dataset.f] = el.value;
+});
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'sort') { st.sort = e.target.value; drawResults(); }
+  if (e.target.id === 'fcard') { st.cardsOnly = e.target.checked; drawResults(); }
+  if (e.target.id === 'ic-who') toggleNewCust();
+  if (e.target.name === 'st') { const n = +e.target.value; document.querySelectorAll('#starpick label').forEach((l, k) => l.classList.toggle('on', k < n)); }
+});
+
+document.addEventListener('submit', async (e) => {
+  const f = e.target.closest('form[data-form]'); if (!f) return;
+  e.preventDefault();
+  const kind = f.dataset.form, v = f.dataset.v, btn = f.querySelector('[type=submit]');
+  const showErr = (id, m) => { const el = $(id); if (el) { el.textContent = m; el.hidden = false; } else toast(m); };
+  if (kind === 'search') { st.q = $('#hs-q').value.trim(); st.zip = $('#hs-zip').value.trim(); st.trade = 'All'; return go('find'); }
+  busy(btn, true);
+  try {
+    if (kind === 'signin') {
+      const { error } = await sb.auth.signInWithPassword({ email: $('#a-email').value.trim(), password: $('#a-pass').value });
+      if (error) throw new Error(/confirm/i.test(error.message) ? 'Confirm your email first. Check your inbox for the link we sent.' : /invalid/i.test(error.message) ? 'That email and password don\'t match.' : error.message);
+      closeModal(); toast('Logged in');
+    }
+    if (kind === 'signup') {
+      const role = f.querySelector('input[name=role]:checked').value;
+      const email = $('#a-email').value.trim();
+      const { data, error } = await sb.auth.signUp({ email, password: $('#a-pass').value, options: { data: { full_name: $('#a-name').value.trim(), role }, emailRedirectTo: location.origin } });
+      if (error) throw error;
+      if (data.session) { closeModal(); toast('Welcome to Probrero'); }
+      else authDone(`<p>We sent a confirmation link to <strong>${esc(email)}</strong>. Open it to finish creating your account, then log in.</p><button class="btn" data-act="signin">Go to log in</button>`);
+    }
+    if (kind === 'forgot') {
+      const email = $('#a-email').value.trim();
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+      if (error) throw error;
+      authDone(`<p>If <strong>${esc(email)}</strong> has a Probrero account, a reset link is on its way.</p>`);
+    }
+    if (kind === 'newpass') {
+      const { error } = await sb.auth.updateUser({ password: $('#np').value });
+      if (error) throw error;
+      closeModal(); toast('Password updated');
+    }
+    if (kind === 'account') {
+      st.profile = await q(sb.from('profiles').update({ full_name: $('#ac-name').value.trim() }).eq('id', uid()).select().single());
+      closeModal(); toast('Saved'); renderHeader();
+    }
+    if (kind === 'listing') { busy(btn, false); return saveListing(f); }
+    if (kind === 'quote') {
+      await q(sb.from('quotes').insert({ pro_id: v, customer_id: uid(), description: $('#qd').value.trim(), timing: $('#qw').value, zip: $('#qz').value.trim() }));
+      closeModal(); toast('Request sent'); return go('quotes');
+    }
+    if (kind === 'reply') {
+      await q(sb.from('quotes').update({ status: 'quoted', amount: num($('#amt-' + v).value), note: $('#note-' + v).value.trim() }).eq('id', v));
+      toast('Quote sent'); return render();
+    }
+    if (kind === 'inv') {
+      const items = draft.items.filter((x) => String(x.description).trim()).map((x) => ({ description: String(x.description).trim(), qty: num(x.qty), rate: Math.round(num(x.rate) * 100) / 100 }));
+      if (!items.length) throw new Error('Add at least one line with a description.');
+      if (invTotal(items) <= 0) throw new Error('The total needs to be more than $0.');
+      const who = $('#ic-who').value;
+      let customer_name, customer_email = '', customer_id = null;
+      if (who) { customer_id = who; customer_name = $('#ic-who').selectedOptions[0].textContent.replace(/ \(from a quote\)$/, ''); }
+      else {
+        customer_name = $('#ic-name').value.trim(); customer_email = $('#ic-email').value.trim();
+        if (!customer_name) throw new Error('Add the customer\'s name.');
+      }
+      const row = await q(sb.from('invoices').insert({
+        pro_id: uid(), number: draft.number, customer_id, customer_name, customer_email, items,
+        total: invTotal(items), notes: $('#ic-notes').value.trim(), due_on: addDays(+$('#ic-terms').value), quote_id: draft.quoteId,
+      }).select().single());
+      if (draft.quoteId) await sb.from('quotes').update({ invoiced: true }).eq('id', draft.quoteId);
+      openModal(mh(esc(row.number), 'Invoice created') + `<p>${money.format(row.total)} for ${esc(row.customer_name)}.</p>
+        <div class="stack" style="gap:8px"><span class="label">Send this pay link</span><div class="linkbox"><input id="paylink" type="text" readonly value="${esc(payLink(row.id))}" aria-label="Pay link"><button class="btn primary" data-act="copy-link">Copy</button></div>
+        <p class="small muted">${row.customer_id ? 'It\'s also in their Probrero account under Bills.' : 'Text or email it to your customer. If they sign up with that email, it shows up in their account too.'}</p></div>
+        <div><button class="btn" data-act="close">Done</button></div>`);
+      return render();
+    }
+    if (kind === 'exp') {
+      const file = $('#ef').files[0];
+      let receipt_path = null;
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) throw new Error('That file is over 10 MB. Try a smaller photo.');
+        const safe = file.name.replace(/[^A-Za-z0-9._-]+/g, '_').slice(-60);
+        receipt_path = `${uid()}/${Date.now()}-${safe}`;
+        const { error } = await sb.storage.from('receipts').upload(receipt_path, file, { contentType: file.type || undefined });
+        if (error) throw error;
+      }
+      await q(sb.from('expenses').insert({ pro_id: uid(), spent_on: $('#ed').value, vendor: $('#ev').value.trim(), category: $('#ecat').value, amount: num($('#ea').value), receipt_path }));
+      closeModal(); toast('Expense saved'); return render();
+    }
+    if (kind === 'review') {
+      const stars = +f.querySelector('input[name=st]:checked').value;
+      await q(sb.from('reviews').insert({ pro_id: v, customer_id: uid(), stars, body: $('#rt').value.trim() }));
+      closeModal(); toast('Review posted'); st.proId = v; return go('pro');
+    }
+  } catch (err) {
+    busy(btn, false);
+    const box = f.querySelector('.err');
+    if (box) { box.textContent = friendly(err); box.hidden = false; } else toast(friendly(err));
+    return;
+  }
+  busy(btn, false);
+});
+$('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+
+boot();
+})();
+
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{})}</script>
 </body>
 </html>

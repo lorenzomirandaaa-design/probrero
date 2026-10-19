@@ -1,10 +1,8 @@
+# Probrero: everything lives at the top level of the repository (no folders).
 [build]
-  publish = "public"
-  functions = "netlify/functions"
+  publish = "."
+  functions = "."
   command = "echo 'No build step needed'"
-
-[functions]
-  node_bundler = "esbuild"
 
 [[headers]]
   for = "/*"

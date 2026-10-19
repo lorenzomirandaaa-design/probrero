@@ -1,14 +1,7 @@
 {
   "name": "probrero",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Probrero: find local trades, get quotes and pay invoices. Pros manage invoices, expenses and Stripe payouts.",
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.45.4",
-    "stripe": "^16.12.0"
-  }
+  "description": "Probrero website. No extra libraries to install."
 }
