@@ -93,6 +93,7 @@ function platformFee(cents) {
 export default async () => {
   const supabaseUrl = env('SUPABASE_URL'), supabaseAnonKey = env('SUPABASE_ANON_KEY');
   if (!supabaseUrl || !supabaseAnonKey) return json({ error: 'missing-config' }, 500);
+  if (!/^https:\/\/[^\s/]+/.test(supabaseUrl)) return json({ error: 'bad-url', message: 'SUPABASE_URL should be your Supabase Project URL, which looks like https://abcdefgh.supabase.co. Right now it holds something else (often a key). Fix it in Netlify → Project configuration → Environment variables, then redeploy.' }, 500);
   return json({ supabaseUrl, supabaseAnonKey, payments: Boolean(env('STRIPE_SECRET_KEY')), fee: feeSettings() });
 };
 export const config = { path: '/api/config' };

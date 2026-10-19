@@ -493,11 +493,13 @@ async function boot() {
   try {
     const r = await fetch('/api/config');
     cfg = await r.json();
-    if (!r.ok || cfg.error) throw new Error('config');
-  } catch (e) { return setupError(); }
+    if (!r.ok || cfg.error) throw new Error(cfg && cfg.message || 'config');
+  } catch (e) { return setupError(e.message !== 'config' ? e.message : ''); }
+  if (!/^https:\/\/[^\s/]+/.test(cfg.supabaseUrl || '')) return setupError('SUPABASE_URL should be your Supabase Project URL, which looks like https://abcdefgh.supabase.co. Right now it holds something else (often a key). Fix it in Netlify → Project configuration → Environment variables, then redeploy.');
   if (!window.supabase) { app.innerHTML = errorHtml('Couldn\'t load the sign-in service. Refresh the page.'); return; }
 
-  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  try { sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey); }
+  catch (e) { return setupError('Probrero couldn\'t connect to Supabase: ' + e.message + '. Check SUPABASE_URL and SUPABASE_ANON_KEY in Netlify, then redeploy.'); }
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') st.recovery = true;
     setTimeout(() => onAuth(event, session), 0);   // never await Supabase inside this callback
@@ -553,11 +555,12 @@ function defaultTab(keep) {
   st.tab = !st.user ? 'home' : isPro() ? 'dash' : 'find';
 }
 
-function setupError() {
-  $('#tabs').innerHTML = '';
+function setupError(detail) {
+  try { renderHeader(); } catch (e) { /* header is optional here */ }
   app.innerHTML = `<div class="card pad stack" style="max-width:640px">
     <h1>Almost there</h1>
-    <p>Probrero is online but not connected to its database yet. In Netlify, open <strong>Site configuration → Environment variables</strong>, add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> from your Supabase project, then redeploy.</p>
+    <p>Probrero is online but not connected to its database yet. In Netlify, open <strong>Project configuration → Environment variables</strong>, add <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> from your Supabase project, then redeploy.</p>
+    ${detail ? `<p class="err">${esc(detail)}</p>` : ''}
     <p class="muted small">The setup guide in the project folder (README.md) walks through every step.</p></div>`;
 }
 const errorHtml = (m) => `<div class="card pad stack"><h2>Something went wrong</h2><p class="muted">${esc(m)}</p><div><button class="btn" data-act="reload">Try again</button></div></div>`;
@@ -1416,7 +1419,7 @@ document.addEventListener('submit', async (e) => {
 });
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
-boot();
+boot().catch((e) => { console.error(e); app.innerHTML = errorHtml(friendly(e)); });
 })();
 
 </script>
