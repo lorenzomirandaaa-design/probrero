@@ -389,6 +389,40 @@ footer{max-width:1180px}
   .kpi.feature strong{font-size:1.9rem}
 }
 
+/* pricing page */
+.pricing-head{align-items:flex-end}
+.seg button{white-space:nowrap}
+.save{background:var(--mark);color:var(--mark-ink);border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:600;margin-left:4px}
+.founding{display:flex;justify-content:space-between;align-items:center;gap:14px 24px;flex-wrap:wrap;background:var(--mark);color:var(--mark-ink);border-radius:var(--r);padding:18px 22px}
+.founding strong{font-family:var(--f-head);font-size:1.1rem}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.plan{padding:28px;display:flex;flex-direction:column;gap:18px}
+.plan.featured{border:2px solid var(--accent);position:relative}
+.plan-tag{position:absolute;top:-12px;left:24px;background:var(--accent);color:var(--accent-ink);font-size:.74rem;font-weight:600;border-radius:999px;padding:3px 12px}
+.plan h2{font-size:1.4rem}
+.price{display:flex;align-items:baseline;gap:6px}
+.price strong{font-family:var(--f-mono);font-weight:500;font-size:2.6rem;letter-spacing:-.03em;line-height:1}
+.plan .fee{background:var(--hover);border-radius:10px;padding:10px 14px;font-size:.9rem}
+.plan .fee b{font-family:var(--f-mono);font-weight:500}
+.checks{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.checks li{display:flex;gap:10px;align-items:flex-start}
+.checks li::before{content:"";flex:none;width:18px;height:18px;margin-top:2px;border-radius:50%;background:var(--good-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231b7a49' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center/12px no-repeat}
+.soon{font-size:.72rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px;margin-left:4px;white-space:nowrap}
+.plan .btn{margin-top:auto}
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;padding:28px;align-items:center}
+.calc input[type=range]{width:100%;accent-color:var(--accent)}
+.calc .vol{font-family:var(--f-mono);font-size:1.5rem;font-weight:500}
+.calc-out{display:flex;flex-direction:column;gap:10px}
+.calc-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.calc-row span:last-child{font-family:var(--f-mono)}
+.verdict{background:var(--soft);color:var(--ink);border-radius:12px;padding:14px 16px;font-weight:500}
+.faq{max-width:760px;display:flex;flex-direction:column}
+.faq details{border-top:1px solid var(--line);padding:16px 0}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;font-weight:600;font-family:var(--f-head);font-size:1.02rem}
+.faq details p{margin-top:8px;color:var(--muted);max-width:62ch}
+@media (max-width:760px){.plans,.calc{grid-template-columns:minmax(0,1fr)}.plan,.calc{padding:22px}}
+
 </style>
 </head>
 <body>
@@ -457,7 +491,7 @@ function friendly(err) {
   if (/row-level security/i.test(m)) return 'You don\'t have permission to do that.';
   if (/duplicate key.*reviews/i.test(m)) return 'You\'ve already reviewed this pro.';
   if (/duplicate key.*number/i.test(m)) return 'That invoice number is already used. Try again.';
-  if (/Failed to fetch|NetworkError/i.test(m)) return 'Can\'t reach Probrero. Check your connection and try again.';
+  if (/Failed to fetch|NetworkError|Load failed|network connection/i.test(m)) return dbProblem() || 'Can\'t reach Probrero. Check your internet connection and try again.';
   return m || 'Something went wrong. Try again.';
 }
 async function q(p) { const { data, error } = await p; if (error) throw error; return data; }
@@ -495,6 +529,8 @@ async function boot() {
     cfg = await r.json();
     if (!r.ok || cfg.error) throw new Error(cfg && cfg.message || 'config');
   } catch (e) { return setupError(e.message !== 'config' ? e.message : ''); }
+  { let u = null; try { u = new URL(cfg.supabaseUrl); } catch (_) { /* checked below */ }
+    if (u && (/(^|\.)supabase\.com$/i.test(u.hostname) || (u.pathname && u.pathname !== '/'))) return setupError('SUPABASE_URL should be just your Project URL, like https://abcdefgh.supabase.co, with nothing after .supabase.co. Right now it is ' + cfg.supabaseUrl + '. Fix it in Netlify → Project configuration → Environment variables, then redeploy.'); }
   if (!/^https:\/\/[^\s/]+/.test(cfg.supabaseUrl || '')) return setupError('SUPABASE_URL should be your Supabase Project URL, which looks like https://abcdefgh.supabase.co. Right now it holds something else (often a key). Fix it in Netlify → Project configuration → Environment variables, then redeploy.');
   if (!window.supabase) { app.innerHTML = errorHtml('Couldn\'t load the sign-in service. Refresh the page.'); return; }
 
@@ -563,6 +599,11 @@ function setupError(detail) {
     ${detail ? `<p class="err">${esc(detail)}</p>` : ''}
     <p class="muted small">The setup guide in the project folder (README.md) walks through every step.</p></div>`;
 }
+function dbProblem() {
+  const h = cfg && cfg.health;
+  if (!h || h === 'ok') return '';
+  return 'Probrero can\'t reach its database' + (h === 'unreachable' ? '' : ' (Supabase answered ' + h.replace('status-', 'error ') + ')') + '. If you run this site: open supabase.com and check whether your project is paused (free projects pause after about a week without activity). If it is, click Restore project and wait a few minutes. Also check that SUPABASE_URL in Netlify is your Project URL, like https://abcdefgh.supabase.co.';
+}
 const errorHtml = (m) => `<div class="card pad stack"><h2>Something went wrong</h2><p class="muted">${esc(m)}</p><div><button class="btn" data-act="reload">Try again</button></div></div>`;
 
 /* ---------------- header + routing ---------------- */
@@ -582,7 +623,7 @@ const ICONS = {
 const icon = (n, size) => `<svg class="ic" width="${size || 20}" height="${size || 20}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ''}</svg>`;
 
 function tabsFor() {
-  if (!st.user) return [['home', 'Home', 'home'], ['find', 'Find pros', 'search']];
+  if (!st.user) return [['home', 'Home', 'home'], ['find', 'Find pros', 'search'], ['pricing', 'Pricing', 'bills']];
   if (isPro()) return st.pro
     ? [['dash', 'Overview', 'dash'], ['invoices', 'Invoices', 'invoices'], ['requests', 'Requests', 'requests'], ['expenses', 'Expenses', 'expenses'], ['business', 'Business', 'business']]
     : [['setup', 'Get started', 'business']];
@@ -610,7 +651,7 @@ function renderHeader() {
     $('#sidenav').innerHTML = '';
     $('#bottomnav').innerHTML = '';
     $('#top').innerHTML = `<div class="bar">${brandHtml()}
-      <nav class="toplinks" aria-label="Sections">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" ${cur === k ? 'aria-current="page"' : ''}>${l}</button>`).join('')}<button data-act="signup-pro">For pros</button></nav>
+      <nav class="toplinks" aria-label="Sections">${tabs.map(([k, l]) => `<button data-act="tab" data-v="${k}" ${cur === k ? 'aria-current="page"' : ''}>${l}</button>`).join('')}</nav>
       <div class="acct"><button class="btn sm" data-act="signin">Log in</button><button class="btn sm primary" data-act="signup">Sign up</button></div></div>`;
   }
   updateBadges();
@@ -634,9 +675,9 @@ async function updateBadges() {
 
 let renderSeq = 0;
 async function render() {
-  const allowedPublic = ['home', 'find', 'pro', 'pay', 'paid'];
+  const allowedPublic = ['home', 'find', 'pro', 'pay', 'paid', 'pricing'];
   if (!st.user && !allowedPublic.includes(st.tab)) st.tab = 'home';
-  if (st.user && !['pay', 'paid', 'pro'].includes(st.tab) && !tabsFor().some((t) => t[0] === st.tab)) defaultTab();
+  if (st.user && !['pay', 'paid', 'pro', 'pricing'].includes(st.tab) && !tabsFor().some((t) => t[0] === st.tab)) defaultTab();
   renderHeader();
   const my = ++renderSeq;
   const slow = setTimeout(() => { if (my === renderSeq) app.innerHTML = '<div class="loading">Loading…</div>'; }, 180);
@@ -674,7 +715,83 @@ async function vHome() {
     <div class="cats">${cats.map((t) => `<button class="cat-tile" data-act="pick-trade" data-v="${t}"><strong>${t}</strong><span>${counts[t] ? counts[t] + ' pro' + (counts[t] === 1 ? '' : 's') : 'Coming soon'}</span></button>`).join('')}</div></section>
   <section><h2>How Probrero works</h2><div class="how">${steps.map(([t, d], k) => `<div><span class="step">${k + 1}</span><h3>${t}</h3><p class="muted">${d}</p></div>`).join('')}</div></section>
   ${top.length ? `<section><div class="sec-head"><h2>Top-rated pros</h2><button class="btn link" data-act="tab" data-v="find">See all</button></div><div class="stack" style="gap:12px">${top.map(resultCard).join('')}</div></section>` : ''}
-  <section class="pro-cta"><div><h2>Run a trade business?</h2><p>Get listed free, answer quote requests, send invoices and get paid by card. Your books stay in one place.</p></div><button class="btn dark lg" data-act="signup-pro">List your business</button></section>`;
+  <section class="pro-cta"><div><h2>Run a trade business?</h2><p>Get listed free, answer quote requests, send invoices and get paid by card. Your books stay in one place.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn dark lg" data-act="signup-pro">List your business</button><button class="btn lg" data-act="tab" data-v="pricing">See pricing</button></div></section>`;
+}
+
+/* ---------------- pricing ---------------- */
+const PLAN = { proMonthly: 25, proYearly: 20, freePct: 3.9, proPct: 3.2, flat: 0.30, freeInvoices: 10 };
+async function vPricing() {
+  const y = st.billing === 'y';
+  const proPrice = y ? PLAN.proYearly : PLAN.proMonthly;
+  const ctaFree = st.user ? '' : '<button class="btn full lg" data-act="signup-pro">Start free</button>';
+  const ctaPro = st.user ? '' : '<button class="btn primary full lg" data-act="signup-pro">Start 3 months free</button>';
+  return `<div class="head pricing-head"><div><span class="label">For pros</span><h1 style="margin-top:4px">Simple pricing for trade businesses</h1>
+      <p class="sub">Start free and upgrade when Probrero is saving you time. Your customers never pay extra to use Probrero.</p></div>
+    <div class="seg" role="group" aria-label="Billing" style="min-width:250px"><button type="button" data-act="bill" data-v="m" aria-pressed="${!y}">Monthly</button><button type="button" data-act="bill" data-v="y" aria-pressed="${y}">Yearly <span class="save">Save 20%</span></button></div></div>
+  <div class="founding"><div><strong>Founding pro offer</strong><div>The first 50 pros in Long Beach get Pro free for 3 months. No card needed to start.</div></div>${st.user ? '' : '<button class="btn dark" data-act="signup-pro">Claim a spot</button>'}</div>
+  <div class="plans">
+    <div class="card plan">
+      <div><h2>Free</h2><p class="muted small" style="margin-top:4px">For trying Probrero and part-time work</p></div>
+      <div class="price"><strong>$0</strong><span class="muted">/ month</span></div>
+      <div class="fee">Card fee: <b>${PLAN.freePct}% + 30¢</b> per payment</div>
+      <ul class="checks">
+        <li>Public listing in Find pros</li>
+        <li>Quote requests from customers</li>
+        <li>Up to ${PLAN.freeInvoices} invoices a month, each with a pay link</li>
+        <li>Card payments deposited to your bank by Stripe</li>
+        <li>Record cash and check payments free</li>
+      </ul>${ctaFree}
+    </div>
+    <div class="card plan featured"><span class="plan-tag">Best for full-time pros</span>
+      <div><h2>Pro</h2><p class="muted small" style="margin-top:4px">For pros who want to get paid faster and keep clean books</p></div>
+      <div class="price"><strong>$${proPrice}</strong><span class="muted">/ month${y ? ', billed $' + PLAN.proYearly * 12 + ' yearly' : ''}</span></div>
+      <div class="fee">Card fee: <b>${PLAN.proPct}% + 30¢</b> per payment</div>
+      <ul class="checks">
+        <li>Everything in Free</li>
+        <li>Unlimited invoices and quotes</li>
+        <li>Lower card fee on every payment</li>
+        <li>Expense tracking with receipt photos</li>
+        <li>Money dashboard: collected, overdue and profit</li>
+        <li>Automatic reminders for late invoices <span class="soon">Coming soon</span></li>
+        <li>Verified license badge on your listing <span class="soon">Coming soon</span></li>
+      </ul>${ctaPro}
+    </div>
+  </div>
+  <section><h2>Which plan costs you less?</h2>
+    <div class="card calc">
+      <div class="stack" style="gap:18px">
+        <div class="field"><label for="calc-vol">Card payments you take each month</label><span class="vol" id="calc-vol-out"></span>
+          <input id="calc-vol" type="range" min="0" max="20000" step="250" value="${st.calcVol ?? 3000}"></div>
+        <div class="field"><label for="calc-n">Invoices you send each month</label><input id="calc-n" type="number" min="0" max="500" step="1" value="${st.calcN ?? 8}"></div>
+      </div>
+      <div class="calc-out" id="calc-out" aria-live="polite"></div>
+    </div></section>
+  <section><h2>Questions</h2><div class="faq">
+    <details><summary>Do my customers pay extra?</summary><p>No. Customers pay exactly what's on the invoice. The card fee comes out of the payment before it reaches you, like with most card readers.</p></details>
+    <details><summary>What does the card fee cover?</summary><p>Stripe's card processing, which is about 2.9% + 30¢, plus Probrero's small share. There's no separate setup or monthly card fee.</p></details>
+    <details><summary>When do I get my money?</summary><p>Stripe deposits card payments into your bank account automatically, usually within a few business days.</p></details>
+    <details><summary>Can I cancel anytime?</summary><p>Yes. Pro is month to month. If you cancel, you move to Free and keep your listing, reviews and invoice history.</p></details>
+    <details><summary>What happens after the 3 free months?</summary><p>We'll remind you a week before. You can add a card to stay on Pro or drop to Free. Nothing is charged automatically.</p></details>
+  </div></section>`;
+}
+function drawCalc() {
+  const vol = Math.max(0, num($('#calc-vol')?.value)), n = Math.max(0, Math.round(num($('#calc-n')?.value)));
+  st.calcVol = vol; st.calcN = n;
+  const out = $('#calc-out'); if (!out) return;
+  $('#calc-vol-out').textContent = money0.format(vol);
+  const y = st.billing === 'y', sub = y ? PLAN.proYearly : PLAN.proMonthly;
+  const freeCost = vol * PLAN.freePct / 100 + n * PLAN.flat;
+  const proCost = sub + vol * PLAN.proPct / 100 + n * PLAN.flat;
+  const overLimit = n > PLAN.freeInvoices;
+  const diff = freeCost - proCost;
+  let verdict;
+  if (overLimit) verdict = `You send more than ${PLAN.freeInvoices} invoices a month, so you'd need Pro. It costs ${money.format(proCost)} a month at your volume.`;
+  else if (diff > 0.5) verdict = `Pro saves you about ${money.format(diff)} a month, or ${money0.format(diff * 12)} a year.`;
+  else verdict = `Free is cheaper for you right now, by ${money.format(-diff)} a month. Pro pays for itself once you take about ${money0.format(sub / ((PLAN.freePct - PLAN.proPct) / 100))} a month by card.`;
+  out.innerHTML = `<div class="calc-row"><span>Free: card fees</span><span>${overLimit ? 'Not available' : money.format(freeCost)}</span></div>
+    <div class="calc-row"><span>Pro: ${money0.format(sub)} plan + card fees</span><span>${money.format(proCost)}</span></div>
+    <div class="verdict">${verdict}</div>
+    <p class="small muted">Card fees include Stripe's processing. Founding pros pay $0 for the plan for the first 3 months.</p>`;
 }
 
 /* ---------------- find pros ---------------- */
@@ -894,7 +1011,7 @@ async function vBusiness() {
   const f = cfg.fee || { percent: 3.9, flatCents: 30 };
   return `<div class="head"><div><h1>Business</h1><p class="sub">Your public listing and how you get paid.</p></div><button class="btn" data-act="open-pro" data-v="${uid()}">View public listing</button></div>
   <section><h2>Getting paid</h2><div class="card pad stack">${stripeBox}
-    <p class="small muted">Probrero charges ${f.percent}% + ${money.format(f.flatCents / 100)} per card payment, which includes card processing. Cash and check payments you record yourself are free.</p></div></section>
+    <p class="small muted">Probrero charges ${f.percent}% + ${money.format(f.flatCents / 100)} per card payment, which includes card processing. Cash and check payments you record yourself are free.</p><button class="btn link" style="align-self:flex-start" data-act="tab" data-v="pricing">Compare plans</button></div></section>
   <section><h2>Public listing</h2><div class="card pad">${listingForm(st.pro, 'Save changes')}</div></section>`;
 }
 async function saveListing(form) {
@@ -1083,8 +1200,8 @@ async function vExpenses() {
 }
 
 /* ---------------- views registry ---------------- */
-const VIEWS = { home: vHome, find: vFind, pro: vProfile, quotes: vQuotes, bills: vBills, pay: vPay, paid: vPaid, setup: vSetup, business: vBusiness, dash: vDash, invoices: vInvoices, requests: vRequests, expenses: vExpenses };
-const AFTER = { find: drawResults, dash: wireChart, paid: pollPaid, setup: drawSvc, business: drawSvc };
+const VIEWS = { pricing: vPricing, home: vHome, find: vFind, pro: vProfile, quotes: vQuotes, bills: vBills, pay: vPay, paid: vPaid, setup: vSetup, business: vBusiness, dash: vDash, invoices: vInvoices, requests: vRequests, expenses: vExpenses };
+const AFTER = { pricing: drawCalc, find: drawResults, dash: wireChart, paid: pollPaid, setup: drawSvc, business: drawSvc };
 
 /* ---------------- modals ---------------- */
 function openModal(html) { $('#sheet').innerHTML = html; $('#modal').hidden = false; const f = $('#sheet').querySelector('input:not([type=radio]):not([type=hidden]),textarea'); if (f) f.focus(); }
@@ -1244,6 +1361,7 @@ document.addEventListener('click', async (e) => {
       case 'reload': return render();
       case 'tab': return go(v);
       case 'trade': st.trade = v; document.querySelectorAll('[data-act=trade]').forEach((c) => c.setAttribute('aria-pressed', c.dataset.v === v)); return drawResults();
+      case 'bill': st.billing = v; return render();
       case 'pick-trade': st.trade = v; st.q = ''; return go('find');
       case 'signup': return mAuth('signup', 'customer');
       case 'open-pro': st.proId = v; return go('pro');
@@ -1314,6 +1432,7 @@ document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.id === 'q') { st.q = el.value; return drawResults(); }
   if (el.id === 'fzip') { st.zip = el.value; return drawResults(); }
+  if (el.id === 'calc-vol' || el.id === 'calc-n') return drawCalc();
   if (el.dataset.k != null && draft) { draft.items[+el.dataset.k][el.dataset.f] = el.value; return updTot(); }
   if (el.dataset.svc != null) svc[+el.dataset.svc][el.dataset.f] = el.value;
 });

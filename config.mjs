@@ -94,6 +94,12 @@ export default async () => {
   const supabaseUrl = env('SUPABASE_URL'), supabaseAnonKey = env('SUPABASE_ANON_KEY');
   if (!supabaseUrl || !supabaseAnonKey) return json({ error: 'missing-config' }, 500);
   if (!/^https:\/\/[^\s/]+/.test(supabaseUrl)) return json({ error: 'bad-url', message: 'SUPABASE_URL should be your Supabase Project URL, which looks like https://abcdefgh.supabase.co. Right now it holds something else (often a key). Fix it in Netlify → Project configuration → Environment variables, then redeploy.' }, 500);
-  return json({ supabaseUrl, supabaseAnonKey, payments: Boolean(env('STRIPE_SECRET_KEY')), fee: feeSettings() });
+  // Check that the Supabase project answers, so the site can say what's wrong instead of "Load failed".
+  let health = 'ok';
+  try {
+    const r = await fetch(supabaseUrl.replace(/\/$/, '') + '/auth/v1/health', { headers: { apikey: supabaseAnonKey }, signal: AbortSignal.timeout(5000) });
+    if (!r.ok) health = 'status-' + r.status;
+  } catch (e) { health = 'unreachable'; }
+  return json({ supabaseUrl, supabaseAnonKey, health, payments: Boolean(env('STRIPE_SECRET_KEY')), fee: feeSettings() });
 };
 export const config = { path: '/api/config' };
